@@ -25,11 +25,36 @@ interface CometMainInterface {
 }
 
 /**
+ * @title ICometAllowance
+ * @dev Interface for the allowance functions in Compound v3's Comet contracts
+ */
+interface ICometAllowance {
+    /**
+     * @dev Allows or disallows a manager to control msg.sender's account
+     * @param manager The address to give or revoke privileges
+     * @param isAllowed true to enable manager privileges, false to disable
+     */
+    function allow(address manager, bool isAllowed) external;
+    
+    /**
+     * @dev Checks if an account has allowance to manage another account
+     * @param owner The account owner
+     * @param manager The account manager to check
+     * @return True if manager is allowed to manage owner's account
+     */
+    function isAllowed(address owner, address manager) external view returns (bool);
+}
+
+/**
  * @title CompoundAdapter
  * @notice Adapter for interacting with Compound v3 (Comet)
  * @dev Implements the IProtocolAdapter interface
  */
-contract CompoundAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable {
+contract CompoundAdapter is
+    IProtocolAdapter,
+    Initializable,
+    OwnableUpgradeable
+{
     // Reference to the Comet contract (Compound v3 instance)
     CometMainInterface public comet;
 
@@ -47,7 +72,7 @@ contract CompoundAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable 
 
     // Protocol name
     string private constant PROTOCOL_NAME = "Compound V3";
-    
+
     // Events
     event Initialized(address indexed initializer);
 
@@ -62,10 +87,10 @@ contract CompoundAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable 
      */
     function initialize(address _cometAddress) public initializer {
         require(_cometAddress != address(0), "Invalid Comet address");
-        
+
         __Ownable_init(msg.sender);
         comet = CometMainInterface(_cometAddress);
-        
+
         emit Initialized(msg.sender);
     }
 
@@ -121,7 +146,6 @@ contract CompoundAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable 
 
         // Supply base token or collateral to the vault's address
         comet.supplyTo(msg.sender, asset, amount);
-
         // Update total principal
         totalPrincipal[asset] += amount;
 
@@ -202,6 +226,26 @@ contract CompoundAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable 
         return actualReceived;
     }
 
+    function getApprovalCalldata(
+        address asset,
+        uint256 amount
+    ) external view override returns (address target, bytes memory data) {
+        require(supportedAssets[asset], "Asset not supported");
+
+        // For Compound v3 (Comet), approval is handled by the allow function on the pool contract
+        // The amount parameter is ignored because Compound's allow is a boolean flag
+
+        // Return the Compound pool address and the allow function calldata
+        return (
+            address(comet), // Target is the Compound pool contract
+            abi.encodeWithSelector(
+                ICometAllowance.allow.selector,
+                address(this),
+                true
+            ) 
+        );
+    }
+
     /**
      * @dev Get the total principal amount deposited in this protocol
      * @param asset The address of the asset
@@ -256,19 +300,10 @@ contract CompoundAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable 
         // Accrue interest for the user (Compound v3 requires this explicit call)
         comet.accrueAccount(msg.sender);
 
-        // Withdraw all assets from Compound
-        comet.withdrawFrom(msg.sender, address(this), asset, type(uint256).max);
-
-        // Get total assets withdrawn
-        totalAssets = IERC20(asset).balanceOf(address(this));
-
-        // Approve Comet contract to spend asset
-        IERC20(asset).approve(address(comet), totalAssets);
-
-        // Supply back to Compound, crediting the vault
-        comet.supplyTo(msg.sender, asset, totalAssets);
-
-        // Update total principal with compounded amount
+        // Get the current balance of the vault in Compound (including accrued interest)
+        totalAssets = comet.balanceOf(msg.sender);
+        
+        // Update total principal with the current balance including interest
         totalPrincipal[asset] = totalAssets;
 
         return totalAssets;
@@ -320,7 +355,9 @@ contract CompoundAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable 
      * @return The Comet contract address as the receipt token
      * @notice In Compound V3, the Comet contract itself acts as the receipt token
      */
-    function getReceiptToken(address asset) external view override returns (address) {
+    function getReceiptToken(
+        address asset
+    ) external view override returns (address) {
         require(supportedAssets[asset], "Asset not supported");
         return address(comet);
     }

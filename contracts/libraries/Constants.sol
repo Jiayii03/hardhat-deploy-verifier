@@ -8,9 +8,9 @@ pragma solidity ^0.8.19;
 library Constants {
     // Protocol IDs
     uint256 public constant AAVE_PROTOCOL_ID = 1;
-    uint256 public constant LAYERBANK_PROTOCOL_ID = 2;
-    uint256 public constant SYNCSWAP_PROTOCOL_ID = 3;
-    uint256 public constant COMPOUND_PROTOCOL_ID = 4;
+    uint256 public constant COMPOUND_PROTOCOL_ID = 2;
+    uint256 public constant LAYERBANK_PROTOCOL_ID = 3;
+    uint256 public constant SYNCSWAP_PROTOCOL_ID = 4;
     
     // Basis points for percentages (100% = 10000)
     uint256 public constant BASIS_POINTS_DENOMINATOR = 10000;

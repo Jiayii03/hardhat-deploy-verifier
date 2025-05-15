@@ -534,6 +534,10 @@ contract SyncSwapAdapter is IProtocolAdapter, Ownable {
         return 1;
     }
 
+    function getApprovalCalldata(address asset, uint256 amount) external view returns (address target, bytes memory data) {
+        return (address(0), bytes(""));
+    }
+
     function getEstimatedInterest(
         address asset
     ) external view returns (uint256) {

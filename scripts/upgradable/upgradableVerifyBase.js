@@ -235,43 +235,43 @@ async function main() {
   }
   
   // Flatten and verify contracts
-  console.log("\n=== Flattening and Verifying Contracts ===");
+  // console.log("\n=== Flattening and Verifying Contracts ===");
   
-  // ProtocolRegistry
-  const registryFlatPath = await flattenContract(
-    "contracts/core/ProtocolRegistry.sol", 
-    "ProtocolRegistry_flat.sol"
-  );
-  if (registryFlatPath) {
-    await verifyContractWithAPI("ProtocolRegistry", registryImpl, registryFlatPath);
-  }
+  // // ProtocolRegistry
+  // const registryFlatPath = await flattenContract(
+  //   "contracts/core/ProtocolRegistry.sol", 
+  //   "ProtocolRegistry_flat.sol"
+  // );
+  // if (registryFlatPath) {
+  //   await verifyContractWithAPI("ProtocolRegistry", registryImpl, registryFlatPath);
+  // }
   
-  // AaveAdapter
-  const aaveAdapterFlatPath = await flattenContract(
-    "contracts/adapters/AaveAdapter.sol", 
-    "AaveAdapter_flat.sol"
-  );
-  if (aaveAdapterFlatPath) {
-    await verifyContractWithAPI("AaveAdapter", aaveAdapterImpl, aaveAdapterFlatPath);
-  }
+  // // AaveAdapter
+  // const aaveAdapterFlatPath = await flattenContract(
+  //   "contracts/adapters/AaveAdapter.sol", 
+  //   "AaveAdapter_flat.sol"
+  // );
+  // if (aaveAdapterFlatPath) {
+  //   await verifyContractWithAPI("AaveAdapter", aaveAdapterImpl, aaveAdapterFlatPath);
+  // }
   
-  // CompoundAdapter
-  const compoundAdapterFlatPath = await flattenContract(
-    "contracts/adapters/CompoundAdapter.sol", 
-    "CompoundAdapter_flat.sol"
-  );
-  if (compoundAdapterFlatPath) {
-    await verifyContractWithAPI("CompoundAdapter", compoundAdapterImpl, compoundAdapterFlatPath);
-  }
+  // // CompoundAdapter
+  // const compoundAdapterFlatPath = await flattenContract(
+  //   "contracts/adapters/CompoundAdapter.sol", 
+  //   "CompoundAdapter_flat.sol"
+  // );
+  // if (compoundAdapterFlatPath) {
+  //   await verifyContractWithAPI("CompoundAdapter", compoundAdapterImpl, compoundAdapterFlatPath);
+  // }
 
   // VirtualVault
-  const virtualVaultFlatPath = await flattenContract(
-    "contracts/core/VirtualVault.sol", 
-    "VirtualVault_flat.sol"
-  );
-  if (virtualVaultFlatPath) {
-    await verifyContractWithAPI("VirtualVault", virtualVaultImpl, virtualVaultFlatPath);
-  }
+  // const virtualVaultFlatPath = await flattenContract(
+  //   "contracts/core/VirtualVault.sol", 
+  //   "VirtualVault_flat.sol"
+  // );
+  // if (virtualVaultFlatPath) {
+  //   await verifyContractWithAPI("VirtualVault", virtualVaultImpl, virtualVaultFlatPath);
+  // }
 
   // CombinedVault
   const combinedVaultFlatPath = await flattenContract(
@@ -284,10 +284,10 @@ async function main() {
   
   console.log("\n=== Verification Process Complete ===");
   console.log("Check contract verification status on Basescan:");
-  console.log(`https://basescan.org/address/${registryImpl}#code`);
-  console.log(`https://basescan.org/address/${aaveAdapterImpl}#code`);
-  console.log(`https://basescan.org/address/${compoundAdapterImpl}#code`);
-  console.log(`https://basescan.org/address/${virtualVaultImpl}#code`);
+  // console.log(`https://basescan.org/address/${registryImpl}#code`);
+  // console.log(`https://basescan.org/address/${aaveAdapterImpl}#code`);
+  // console.log(`https://basescan.org/address/${compoundAdapterImpl}#code`);
+  // console.log(`https://basescan.org/address/${virtualVaultImpl}#code`);
   console.log(`https://basescan.org/address/${combinedVaultImpl}#code`);
 }
 

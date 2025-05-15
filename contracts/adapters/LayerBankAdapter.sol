@@ -440,6 +440,10 @@ contract LayerBankAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable
         return actualWithdrawn;
     }
 
+    function getApprovalCalldata(address asset, uint256 amount) external view returns (address target, bytes memory data) {
+        return (address(0), bytes(""));
+    }
+
     /**
      * @dev Harvest yield from the protocol by compounding interest
      * @param asset The address of the asset

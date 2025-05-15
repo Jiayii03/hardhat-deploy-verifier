@@ -488,7 +488,7 @@ interface IProtocolAdapter {
      * @return The amount of underlying tokens that were successfully supplied
      */
     function supply(address asset, uint256 amount) external returns (uint256);
-    
+
     /**
      * @dev Withdraw assets from the underlying protocol
      * @param asset The address of the asset to withdraw
@@ -496,7 +496,7 @@ interface IProtocolAdapter {
      * @return The amount of underlying tokens successfully withdrawn
      */
     function withdraw(address asset, uint256 amount) external returns (uint256);
-    
+
     /**
      * @dev Withdraw assets from the underlying protocol and send directly to a user
      * @param asset The address of the asset to withdraw
@@ -504,8 +504,24 @@ interface IProtocolAdapter {
      * @param user The address of the user to receive the withdrawn assets
      * @return The amount of underlying tokens successfully withdrawn and sent to user
      */
-    function withdrawToUser(address asset, uint256 amount, address user) external returns (uint256);
-    
+    function withdrawToUser(
+        address asset,
+        uint256 amount,
+        address user
+    ) external returns (uint256);
+
+    /**
+     * @dev Returns the calldata needed for the vault to approve the adapter to spend receipt tokens
+     * @param asset The address of the underlying asset
+     * @param amount The amount of receipt tokens to approve
+     * @return target The target contract to call (the receipt token address)
+     * @return data The calldata for the approval function
+     */
+    function getApprovalCalldata(
+        address asset,
+        uint256 amount
+    ) external view returns (address target, bytes memory data);
+
     /**
      * @dev Harvest yield from the protocol by compounding interest
      * @param asset The address of the asset
@@ -519,21 +535,21 @@ interface IProtocolAdapter {
      * @return The current APY in basis points (1% = 100)
      */
     function getAPY(address asset) external view returns (uint256);
-    
+
     /**
      * @dev Get the current balance in the protocol in underlying asset terms
      * @param asset The address of the asset
      * @return The current balance in underlying asset units
      */
     function getBalance(address asset) external view returns (uint256);
-    
+
     /**
      * @dev Get the total principal amount deposited in this protocol
      * @param asset The address of the asset
      * @return The total principal amount in underlying asset units
      */
     function getTotalPrincipal(address asset) external view returns (uint256);
-    
+
     /**
      * @dev Check if an asset is supported by this protocol adapter
      * @param asset The address of the asset to check
@@ -546,20 +562,22 @@ interface IProtocolAdapter {
      * @return The name of the protocol
      */
     function getProtocolName() external view returns (string memory);
-    
+
     /**
      * @dev Set the minimum reward amount to consider profitable after fees
      * @param asset The address of the asset
      * @param amount The minimum reward amount
      */
     function setMinRewardAmount(address asset, uint256 amount) external;
-    
+
     /**
      * @dev Get the minimum reward amount to consider profitable after fees
      * @param asset The address of the asset
      * @return The minimum reward amount
      */
-    function getEstimatedInterest(address asset) external view returns (uint256);
+    function getEstimatedInterest(
+        address asset
+    ) external view returns (uint256);
 
     /**
      * @dev Get the receipt token for a specific asset
@@ -592,11 +610,36 @@ interface CometMainInterface {
 }
 
 /**
+ * @title ICometAllowance
+ * @dev Interface for the allowance functions in Compound v3's Comet contracts
+ */
+interface ICometAllowance {
+    /**
+     * @dev Allows or disallows a manager to control msg.sender's account
+     * @param manager The address to give or revoke privileges
+     * @param isAllowed true to enable manager privileges, false to disable
+     */
+    function allow(address manager, bool isAllowed) external;
+    
+    /**
+     * @dev Checks if an account has allowance to manage another account
+     * @param owner The account owner
+     * @param manager The account manager to check
+     * @return True if manager is allowed to manage owner's account
+     */
+    function isAllowed(address owner, address manager) external view returns (bool);
+}
+
+/**
  * @title CompoundAdapter
  * @notice Adapter for interacting with Compound v3 (Comet)
  * @dev Implements the IProtocolAdapter interface
  */
-contract CompoundAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable {
+contract CompoundAdapter is
+    IProtocolAdapter,
+    Initializable,
+    OwnableUpgradeable
+{
     // Reference to the Comet contract (Compound v3 instance)
     CometMainInterface public comet;
 
@@ -614,7 +657,7 @@ contract CompoundAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable 
 
     // Protocol name
     string private constant PROTOCOL_NAME = "Compound V3";
-    
+
     // Events
     event Initialized(address indexed initializer);
 
@@ -629,10 +672,10 @@ contract CompoundAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable 
      */
     function initialize(address _cometAddress) public initializer {
         require(_cometAddress != address(0), "Invalid Comet address");
-        
+
         __Ownable_init(msg.sender);
         comet = CometMainInterface(_cometAddress);
-        
+
         emit Initialized(msg.sender);
     }
 
@@ -688,7 +731,6 @@ contract CompoundAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable 
 
         // Supply base token or collateral to the vault's address
         comet.supplyTo(msg.sender, asset, amount);
-
         // Update total principal
         totalPrincipal[asset] += amount;
 
@@ -769,6 +811,26 @@ contract CompoundAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable 
         return actualReceived;
     }
 
+    function getApprovalCalldata(
+        address asset,
+        uint256 amount
+    ) external view override returns (address target, bytes memory data) {
+        require(supportedAssets[asset], "Asset not supported");
+
+        // For Compound v3 (Comet), approval is handled by the allow function on the pool contract
+        // The amount parameter is ignored because Compound's allow is a boolean flag
+
+        // Return the Compound pool address and the allow function calldata
+        return (
+            address(comet), // Target is the Compound pool contract
+            abi.encodeWithSelector(
+                ICometAllowance.allow.selector,
+                address(this),
+                true
+            ) 
+        );
+    }
+
     /**
      * @dev Get the total principal amount deposited in this protocol
      * @param asset The address of the asset
@@ -823,19 +885,10 @@ contract CompoundAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable 
         // Accrue interest for the user (Compound v3 requires this explicit call)
         comet.accrueAccount(msg.sender);
 
-        // Withdraw all assets from Compound
-        comet.withdrawFrom(msg.sender, address(this), asset, type(uint256).max);
-
-        // Get total assets withdrawn
-        totalAssets = IERC20(asset).balanceOf(address(this));
-
-        // Approve Comet contract to spend asset
-        IERC20(asset).approve(address(comet), totalAssets);
-
-        // Supply back to Compound, crediting the vault
-        comet.supplyTo(msg.sender, asset, totalAssets);
-
-        // Update total principal with compounded amount
+        // Get the current balance of the vault in Compound (including accrued interest)
+        totalAssets = comet.balanceOf(msg.sender);
+        
+        // Update total principal with the current balance including interest
         totalPrincipal[asset] = totalAssets;
 
         return totalAssets;
@@ -887,7 +940,9 @@ contract CompoundAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable 
      * @return The Comet contract address as the receipt token
      * @notice In Compound V3, the Comet contract itself acts as the receipt token
      */
-    function getReceiptToken(address asset) external view override returns (address) {
+    function getReceiptToken(
+        address asset
+    ) external view override returns (address) {
         require(supportedAssets[asset], "Asset not supported");
         return address(comet);
     }

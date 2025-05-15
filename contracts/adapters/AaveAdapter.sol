@@ -345,6 +345,28 @@ contract AaveAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable {
     }
 
     /**
+     * @dev Returns the calldata needed for the vault to approve the adapter to spend aTokens
+     * @param asset The address of the underlying asset
+     * @param amount The amount of aTokens to approve
+     * @return target The target contract to call (the aToken address)
+     * @return data The calldata for the approval function
+     */
+    function getApprovalCalldata(address asset, uint256 amount) external view returns (address target, bytes memory data) {
+        require(supportedAssets[asset], "Asset not supported");
+        
+        // Get the aToken for this asset
+        address aToken = aTokens[asset];
+        require(aToken != address(0), "aToken not found");
+        
+        // For Aave's aTokens, we use the standard ERC20 approve function
+        return (
+            aToken, // Target is the aToken contract
+            abi.encodeWithSignature("approve(address,uint256)", address(this), amount) // Standard approve calldata
+        );
+    }
+
+
+    /**
      * @dev Harvest yield from the protocol by compounding interest
      * @param asset The address of the asset
      * @return totalAssets The total amount of underlying assets in the protocol
@@ -357,40 +379,19 @@ contract AaveAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable {
         address aToken = aTokens[asset];
         require(aToken != address(0), "aToken not found");
 
-        // Get current aToken balance based on total principal
-        uint256 aTokenBalance = totalPrincipal[asset];
-        if (aTokenBalance == 0) {
-            return 0; // Nothing to harvest
-        }
+        // aToken balance already includes accrued interest
+        totalAssets = IERC20(aToken).balanceOf(msg.sender);
 
-        // Transfer aTokens from vault to adapter
-        IERC20(aToken).transferFrom(msg.sender, address(this), IERC20(aToken).balanceOf(msg.sender));
-
-        // Withdraw all assets from Aave
-        pool.withdraw(asset, type(uint256).max, address(this));
-
-        // Get total assets withdrawn
-        totalAssets = IERC20(asset).balanceOf(address(this));
-
-        // Claim any available reward tokens (even if not expected on Scroll)
+        // Optional: Claim rewards
         if (address(rewardsController) != address(0)) {
             try this.claimAaveRewards(asset) {
-                // Rewards claimed successfully (if any)
+                // Success
             } catch {
-                // Ignore errors in reward claiming
+                // Ignore
             }
         }
 
-        // Approve Aave pool to spend asset
-        IERC20(asset).approve(address(pool), totalAssets);
-
-        // Supply asset back to Aave, minting aTokens directly to the vault
-        pool.supply(asset, totalAssets, msg.sender, 0);
-
-        // Update total principal with compounded amount
         totalPrincipal[asset] = totalAssets;
-
-        // Update last harvest timestamp
         lastHarvestTimestamp[asset] = block.timestamp;
 
         return totalAssets;

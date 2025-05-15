@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "./interfaces/IRegistry.sol";
+import "../adapters/interfaces/IProtocolAdapter.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 

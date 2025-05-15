@@ -71,30 +71,43 @@ contract VirtualVault is
         combinedVault = ICombinedVault(_vault);
     }
 
-    // Override deposit: 1:1 shares, queue user
+    // Override deposit: 1:1 shares, queue user - receiver is always msg.sender
     function deposit(uint256 assets, address receiver) public override returns (uint256 shares) {
         require(assets > 0, "Deposit must be > 0");
+        // Force receiver to be msg.sender for security
+        require(receiver == msg.sender, "Receiver must be sender");
+        
         // Transfer assets from user
         IERC20(asset()).safeTransferFrom(msg.sender, address(this), assets);
 
         // Mint 1:1 shares
         shares = assets;
-        _mint(receiver, shares);
+        _mint(msg.sender, shares);
 
         // Queue user deposit
-        if (!queuedDeposits[receiver].exists) {
-            queuedUsers.push(receiver);
-            queuedDeposits[receiver].exists = true;
+        if (!queuedDeposits[msg.sender].exists) {
+            queuedUsers.push(msg.sender);
+            queuedDeposits[msg.sender].exists = true;
         }
-        queuedDeposits[receiver].amount += assets;
+        queuedDeposits[msg.sender].amount += assets;
 
-        emit Deposit(msg.sender, receiver, assets, shares);
+        emit Deposit(msg.sender, msg.sender, assets, shares);
         return shares;
     }
 
-    // Only allow withdrawal if funds are still queued
+    // Simplified version that only allows depositing to yourself
+    function deposit(uint256 assets) public returns (uint256) {
+        return deposit(assets, msg.sender);
+    }
+
+    // Override ERC4626 withdraw function to enforce security checks
     function withdraw(uint256 assets, address receiver, address owner) public override returns (uint256 shares) {
         require(queuedDeposits[owner].amount >= assets, "Not enough queued");
+        // Force owner to be msg.sender for security
+        require(owner == msg.sender, "Only owner can withdraw");
+        // Force receiver to be owner for security
+        require(receiver == owner, "Receiver must be owner");
+        
         shares = assets;
         _burn(owner, shares);
 
@@ -107,6 +120,11 @@ contract VirtualVault is
         IERC20(asset()).safeTransfer(receiver, assets);
         emit Withdraw(msg.sender, receiver, owner, assets, shares);
         return shares;
+    }
+    
+    // Simplified withdraw function that only allows withdrawing to yourself
+    function withdraw(uint256 assets) public returns (uint256) {
+        return withdraw(assets, msg.sender, msg.sender);
     }
 
     // Transfer all queued funds to the Combined Vault at epoch end
