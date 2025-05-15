@@ -1,0 +1,29 @@
+{
+  "name": "hardhat-deploy-verifier",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-verify": "^2.0.11",
+    "@nomiclabs/hardhat-ethers": "^2.2.3",
+    "@openzeppelin/contracts": "^5.2.0",
+    "@openzeppelin/hardhat-upgrades": "^1.28.0",
+    "ethers": "^5.8.0",
+    "hardhat": "^2.23.0"
+  },
+  "dependencies": {
+    "@aave-dao/aave-v3-origin": "github:aave-dao/aave-v3-origin",
+    "@alch/alchemy-web3": "^1.4.7",
+    "@compound-finance/comet-extension": "^0.0.16",
+    "@compound-finance/compound-js": "^0.6.2",
+    "@syncswap/core-contracts": "github:syncswap/core-contracts",
+    "comet": "^1.0.1",
+    "dotenv": "^16.4.5"
+  }
+}
