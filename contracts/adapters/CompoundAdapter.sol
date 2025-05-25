@@ -2,68 +2,59 @@
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IProtocolAdapter.sol";
 
-/**
- * @title Simplified Compound V3 (Comet) Interface
- * @notice Contains only the methods used by CompoundAdapter
- */
+
 interface CometMainInterface {
-    // Supply and withdrawal methods
-    function supplyTo(address dst, address asset, uint amount) external;
-    function withdrawFrom(address src, address to, address asset, uint amount) external;
-    
-    // Interest rate calculation methods
-    function getUtilization() external view returns (uint);
-    function getSupplyRate(uint utilization) external view returns (uint);
-    
-    // Account methods
-    function accrueAccount(address account) external;
-    function balanceOf(address owner) external view returns (uint256);
+    /**
+     * @notice Supply an asset to the protocol
+     * @param asset The address of the asset to supply
+     * @param amount The amount of the asset to supply
+     */
+    function supply(address asset, uint256 amount) external;
+
+    /**
+     * @notice Withdraw an asset from the protocol
+     * @param asset The address of the asset to withdraw
+     * @param amount The amount of the asset to withdraw
+     */
+    function withdraw(address asset, uint256 amount) external;
+
+    /**
+     * @notice Get the balance of an account
+     * @param account The address of the account
+     * @return The account's balance
+     */
+    function balanceOf(address account) external view returns (uint256);
+
+    /**
+     * @notice Get the current protocol utilization
+     * @return The utilization value
+     */
+    function getUtilization() external view returns (uint256);
+
+    /**
+     * @notice Get the supply interest rate based on utilization
+     * @param utilization The current protocol utilization
+     * @return The supply interest rate
+     */
+    function getSupplyRate(uint256 utilization) external view returns (uint256);
 }
 
-/**
- * @title ICometAllowance
- * @dev Interface for the allowance functions in Compound v3's Comet contracts
- */
-interface ICometAllowance {
-    /**
-     * @dev Allows or disallows a manager to control msg.sender's account
-     * @param manager The address to give or revoke privileges
-     * @param isAllowed true to enable manager privileges, false to disable
-     */
-    function allow(address manager, bool isAllowed) external;
-    
-    /**
-     * @dev Checks if an account has allowance to manage another account
-     * @param owner The account owner
-     * @param manager The account manager to check
-     * @return True if manager is allowed to manage owner's account
-     */
-    function isAllowed(address owner, address manager) external view returns (bool);
-}
 
 /**
  * @title CompoundAdapter
  * @notice Adapter for interacting with Compound v3 (Comet)
  * @dev Implements the IProtocolAdapter interface
  */
-contract CompoundAdapter is
-    IProtocolAdapter,
-    Initializable,
-    OwnableUpgradeable
-{
+contract CompoundAdapter is IProtocolAdapter, Ownable {
     // Reference to the Comet contract (Compound v3 instance)
-    CometMainInterface public comet;
-
-    // Mapping of asset address to cToken address
-    mapping(address => address) public cTokens;
+    CometMainInterface public immutable comet;
 
     // Mapping of supported assets
     mapping(address => bool) public supportedAssets;
-
+    
     // Tracking total principal per asset
     mapping(address => uint256) public totalPrincipal;
 
@@ -73,37 +64,20 @@ contract CompoundAdapter is
     // Protocol name
     string private constant PROTOCOL_NAME = "Compound V3";
 
-    // Events
-    event Initialized(address indexed initializer);
-
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
-
     /**
-     * @dev Initializer function
+     * @dev Constructor
      * @param _cometAddress The address of the Comet contract
      */
-    function initialize(address _cometAddress) public initializer {
-        require(_cometAddress != address(0), "Invalid Comet address");
-
-        __Ownable_init(msg.sender);
+    constructor(address _cometAddress) Ownable(msg.sender) {
         comet = CometMainInterface(_cometAddress);
-
-        emit Initialized(msg.sender);
     }
 
     /**
      * @dev Add a supported asset
      * @param asset The address of the asset
      */
-    function addSupportedAsset(
-        address asset,
-        address cToken
-    ) external onlyOwner {
+    function addSupportedAsset(address asset) external onlyOwner {
         supportedAssets[asset] = true;
-        cTokens[asset] = cToken;
     }
 
     /**
@@ -119,9 +93,7 @@ contract CompoundAdapter is
      * @param asset The address of the asset
      * @return True if the asset is supported
      */
-    function isAssetSupported(
-        address asset
-    ) external view override returns (bool) {
+    function isAssetSupported(address asset) external view override returns (bool) {
         return supportedAssets[asset];
     }
 
@@ -131,21 +103,19 @@ contract CompoundAdapter is
      * @param amount The amount of the asset to supply
      * @return The amount of underlying tokens that were successfully supplied
      */
-    function supply(
-        address asset,
-        uint256 amount
-    ) external override returns (uint256) {
+    function supply(address asset, uint256 amount) external override returns (uint256) {
         require(supportedAssets[asset], "Asset not supported");
         require(amount > 0, "Amount must be greater than 0");
-
+        
         // Transfer asset from sender to this contract
         IERC20(asset).transferFrom(msg.sender, address(this), amount);
 
         // Approve Comet contract to spend asset
         IERC20(asset).approve(address(comet), amount);
 
-        // Supply base token or collateral to the vault's address
-        comet.supplyTo(msg.sender, asset, amount);
+        // Supply base token or collateral
+        comet.supply(asset, amount);
+
         // Update total principal
         totalPrincipal[asset] += amount;
 
@@ -158,30 +128,24 @@ contract CompoundAdapter is
      * @param amount The amount of the asset to withdraw
      * @return The actual amount withdrawn
      */
-    function withdraw(
-        address asset,
-        uint256 amount
-    ) external override returns (uint256) {
+    function withdraw(address asset, uint256 amount) external override returns (uint256) {
         require(supportedAssets[asset], "Asset not supported");
         require(amount > 0, "Amount must be greater than 0");
-
-        // Calculate max withdrawal amount (total principal)
-        uint256 maxWithdrawal = totalPrincipal[asset];
-        uint256 withdrawAmount = amount > maxWithdrawal
-            ? maxWithdrawal
-            : amount;
-
-        // No need to transfer cTokens - just withdraw directly from Comet
-        comet.withdrawFrom(msg.sender, msg.sender, asset, withdrawAmount);
+        
+        // Withdraw from Comet
+        comet.withdraw(asset, amount);
+        
+        // Transfer asset to caller
+        IERC20(asset).transfer(msg.sender, amount);
 
         // Update total principal
-        if (withdrawAmount <= totalPrincipal[asset]) {
-            totalPrincipal[asset] -= withdrawAmount;
+        if (amount <= totalPrincipal[asset]) {
+            totalPrincipal[asset] -= amount;
         } else {
             totalPrincipal[asset] = 0;
         }
 
-        return withdrawAmount;
+        return amount;
     }
 
     /**
@@ -191,59 +155,24 @@ contract CompoundAdapter is
      * @param user The address of the user to receive the withdrawn assets
      * @return The amount of underlying tokens successfully withdrawn and sent to the user
      */
-    function withdrawToUser(
-        address asset,
-        uint256 amount,
-        address user
-    ) external override returns (uint256) {
+    function withdrawToUser(address asset, uint256 amount, address user) external override returns (uint256) {
         require(supportedAssets[asset], "Asset not supported");
         require(amount > 0, "Amount must be greater than 0");
-        require(user != address(0), "Invalid user address");
 
-        // Calculate max withdrawal amount (total principal)
-        uint256 maxWithdrawal = totalPrincipal[asset];
-        uint256 withdrawAmount = amount > maxWithdrawal
-            ? maxWithdrawal
-            : amount;
+        // Withdraw from Comet
+        comet.withdraw(asset, amount);
 
-        // Get initial user balance
-        uint256 userBalanceBefore = IERC20(asset).balanceOf(user);
-
-        // Withdraw from Comet directly to user
-        comet.withdrawFrom(msg.sender, user, asset, withdrawAmount);
-
-        // Verify the withdrawal - calculate actual amount received
-        uint256 userBalanceAfter = IERC20(asset).balanceOf(user);
-        uint256 actualReceived = userBalanceAfter - userBalanceBefore;
+        // Transfer asset to the user
+        IERC20(asset).transfer(user, amount);
 
         // Update total principal
-        if (actualReceived <= totalPrincipal[asset]) {
-            totalPrincipal[asset] -= actualReceived;
+        if (amount <= totalPrincipal[asset]) {
+            totalPrincipal[asset] -= amount;
         } else {
             totalPrincipal[asset] = 0;
         }
 
-        return actualReceived;
-    }
-
-    function getApprovalCalldata(
-        address asset,
-        uint256 amount
-    ) external view override returns (address target, bytes memory data) {
-        require(supportedAssets[asset], "Asset not supported");
-
-        // For Compound v3 (Comet), approval is handled by the allow function on the pool contract
-        // The amount parameter is ignored because Compound's allow is a boolean flag
-
-        // Return the Compound pool address and the allow function calldata
-        return (
-            address(comet), // Target is the Compound pool contract
-            abi.encodeWithSelector(
-                ICometAllowance.allow.selector,
-                address(this),
-                true
-            ) 
-        );
+        return amount;
     }
 
     /**
@@ -251,9 +180,7 @@ contract CompoundAdapter is
      * @param asset The address of the asset
      * @return The total principal amount in underlying asset units
      */
-    function getTotalPrincipal(
-        address asset
-    ) external view override returns (uint256) {
+    function getTotalPrincipal(address asset) external view override returns (uint256) {
         require(supportedAssets[asset], "Asset not supported");
         return totalPrincipal[asset];
     }
@@ -275,38 +202,42 @@ contract CompoundAdapter is
      * @param asset The address of the asset
      * @return The current balance
      */
-    function getBalance(
-        address asset
-    ) external view override returns (uint256) {
+    function getBalance(address asset) external view override returns (uint256) {
         require(supportedAssets[asset], "Asset not supported");
-        return totalPrincipal[asset];
+        return comet.balanceOf(address(this));
     }
 
     /**
      * @dev Harvest accrued interest from Compound
      * @param asset The address of the asset
-     * @return totalAssets The total amount of underlying assets in the protocol
+     * @return harvestedAmount The total amount harvested in underlying asset terms
      */
-    function harvest(
-        address asset
-    ) external override returns (uint256 totalAssets) {
+    function harvest(address asset) external view override returns (uint256 harvestedAmount) {
         require(supportedAssets[asset], "Asset not supported");
 
-        // Check if there's anything to harvest
-        if (totalPrincipal[asset] == 0) {
-            return 0; // Nothing to harvest
-        }
-
-        // Accrue interest for the user (Compound v3 requires this explicit call)
-        comet.accrueAccount(msg.sender);
-
-        // Get the current balance of the vault in Compound (including accrued interest)
-        totalAssets = comet.balanceOf(msg.sender);
+        uint utilization = comet.getUtilization();
+        uint interestRate = comet.getSupplyRate(utilization);
         
-        // Update total principal with the current balance including interest
-        totalPrincipal[asset] = totalAssets;
+        uint balance = comet.balanceOf(address(this));
 
-        return totalAssets;
+        // Calculate estimated interest earned
+        harvestedAmount = (balance * interestRate) / 1e18;
+
+        return harvestedAmount;
+    }
+
+        /**
+     * @dev Convert fees to rewards in the protocol
+     * @param asset The address of the asset
+     * @param fee The amount of fee to convert
+     */
+    function convertFeeToReward(address asset, uint256 fee) external override {
+        require(supportedAssets[asset], "Asset not supported");
+        require(fee > 0, "Fee must be greater than 0");
+        require(fee <= totalPrincipal[asset], "Fee exceeds total principal");
+
+        // Reduce the total principal to convert fee to yield
+        totalPrincipal[asset] -= fee;
     }
 
     /**
@@ -314,28 +245,23 @@ contract CompoundAdapter is
      * @param asset The address of the asset
      * @param amount The minimum reward amount
      */
-    function setMinRewardAmount(
-        address asset,
-        uint256 amount
-    ) external override {
+    function setMinRewardAmount(address asset, uint256 amount) external override {
         require(supportedAssets[asset], "Asset not supported");
         minRewardAmount[asset] = amount;
     }
 
     /**
-     * @dev Get the estimated interest for an asset
+     * @dev Get the estimated interest for an asset (fetching from Compound)
      * @param asset The address of the asset
-     * @return The estimated interest amount
+     * @return The estimated interest amount based on Compound's calculations
      */
-    function getEstimatedInterest(
-        address asset
-    ) external view override returns (uint256) {
+    function getEstimatedInterest(address asset) external view override returns (uint256) {
         require(supportedAssets[asset], "Asset not supported");
 
         uint utilization = comet.getUtilization();
         uint interestRate = comet.getSupplyRate(utilization);
-
-        uint balance = comet.balanceOf(msg.sender);
+        
+        uint balance = comet.balanceOf(address(this));
 
         // Calculate estimated interest: (balance * rate) / scaling factor
         return (balance * interestRate) / 1e18;
@@ -348,24 +274,4 @@ contract CompoundAdapter is
     function getProtocolName() external pure override returns (string memory) {
         return PROTOCOL_NAME;
     }
-
-    /**
-     * @dev Get the receipt token for a specific asset
-     * @param asset The address of the asset
-     * @return The Comet contract address as the receipt token
-     * @notice In Compound V3, the Comet contract itself acts as the receipt token
-     */
-    function getReceiptToken(
-        address asset
-    ) external view override returns (address) {
-        require(supportedAssets[asset], "Asset not supported");
-        return address(comet);
-    }
-
-    /**
-     * @dev This empty reserved space is put in place to allow future versions to add new
-     * variables without shifting down storage in the inheritance chain.
-     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
-     */
-    uint256[50] private __gap;
 }

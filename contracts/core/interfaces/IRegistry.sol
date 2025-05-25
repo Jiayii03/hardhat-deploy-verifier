@@ -35,6 +35,12 @@ interface IRegistry {
     function removeAdapter(uint256 protocolId, address asset) external;
 
     /**
+     * @dev Set the active protocol ID
+     * @param protocolId The protocol ID to set as active
+     */
+    function setActiveProtocol(uint256 protocolId) external;
+
+    /**
      * @dev Get the adapter for a specific protocol and asset
      * @param protocolId The ID of the protocol
      * @param asset The address of the asset
@@ -42,6 +48,15 @@ interface IRegistry {
      */
     function getAdapter(
         uint256 protocolId,
+        address asset
+    ) external view returns (IProtocolAdapter);
+
+    /**
+     * @dev Get the active adapter for an asset
+     * @param asset The address of the asset
+     * @return The active protocol adapter
+     */
+    function getActiveAdapter(
         address asset
     ) external view returns (IProtocolAdapter);
 
@@ -61,6 +76,12 @@ interface IRegistry {
     ) external view returns (string memory);
 
     /**
+     * @dev Get the current active protocol ID
+     * @return The active protocol ID
+     */
+    function getActiveProtocolId() external view returns (uint256);
+
+    /**
      * @dev Check if an adapter is registered for a protocol and asset
      * @param protocolId The ID of the protocol
      * @param asset The address of the asset
@@ -72,39 +93,9 @@ interface IRegistry {
     ) external view returns (bool);
 
     /**
+     *
      * @dev Transfer ownership of the registry
      * @param newOwner The address of the new owner
      */
     function transferOwnership(address newOwner) external;
-
-    /**
-     * @dev Set an authorized external caller (e.g., Yield Optimizer)
-     * @param newCaller The address of the authorized caller
-     */
-    function setAuthorizedCaller(address newCaller) external;
-
-    /**
-     * @dev Add a protocol to active protocols (protocols with user funds)
-     * @param protocolId The protocol ID to add to active protocols
-     */
-    function addActiveProtocol(uint256 protocolId) external;
-
-    /**
-     * @dev Remove a protocol from active protocols
-     * @param protocolId The protocol ID to remove from active protocols
-     */
-    function removeActiveProtocol(uint256 protocolId) external;
-
-    /**
-     * @dev Replace an active protocol with another
-     * @param oldProtocolId The protocol ID to remove from active protocols
-     * @param newProtocolId The protocol ID to add to active protocols
-     */
-    function replaceActiveProtocol(uint256 oldProtocolId, uint256 newProtocolId) external;
-
-    /**
-     * @dev Get all active protocol IDs (protocols with user funds)
-     * @return Array of active protocol IDs
-     */
-    function getActiveProtocolIds() external view returns (uint256[] memory);
 }

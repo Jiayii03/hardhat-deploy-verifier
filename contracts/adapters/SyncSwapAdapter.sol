@@ -534,10 +534,6 @@ contract SyncSwapAdapter is IProtocolAdapter, Ownable {
         return 1;
     }
 
-    function getApprovalCalldata(address asset, uint256 amount) external view returns (address target, bytes memory data) {
-        return (address(0), bytes(""));
-    }
-
     function getEstimatedInterest(
         address asset
     ) external view returns (uint256) {
@@ -563,9 +559,6 @@ contract SyncSwapAdapter is IProtocolAdapter, Ownable {
         return (initialDeposit * 3 * timeElapsed) / (365 days * 100);
     }
 
-    // Mock getReceiptToken, not useful for mock
-    function getReceiptToken(address asset) external view override returns (address) {
-        return asset;
-    }
+
 
 }

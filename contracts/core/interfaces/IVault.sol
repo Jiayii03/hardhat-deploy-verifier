@@ -7,12 +7,6 @@ pragma solidity ^0.8.19;
  */
 interface IVault {
     /**
-     * @dev Returns the address of the underlying token used for the Vault
-     * @return The address of the underlying asset token
-     */
-    function asset() external view returns (address);
-
-    /**
      * @dev Deposit assets into the vault
      * @param user Address of the user to deposit for
      * @param amount Amount of assets to deposit
@@ -20,18 +14,54 @@ interface IVault {
     function deposit(address user, uint256 amount) external;
     
     /**
-     * @dev ERC4626-compatible withdraw function
-     * @param assets Amount of assets to withdraw
-     * @param receiver Address receiving the assets
-     * @param owner Address that owns the shares being burned
-     * @return Amount of assets withdrawn
+     * @dev Withdraw assets from the vault
+     * @param user Address of the user to withdraw for
+     * @param amount Amount to withdraw
      */
-    function withdraw(uint256 assets, address receiver, address owner) external returns (uint256);
+    function withdraw(address user, uint256 amount) external;
     
     /**
      * @dev Check and harvest yield from all protocols
      */
-    function accrueAndFlush() external returns (uint256 totalAssets);
+    function checkAndHarvest() external returns (uint256 harvestedAmount);
+    
+    /**
+     * @dev Get the current epoch
+     * @return Current epoch number
+     */
+    function getCurrentEpoch() external view returns (uint256);
+    
+    /**
+     * @dev Get all active users
+     * @return Array of active user addresses
+     */
+    function getUsers() external view returns (address[] memory);
+    
+    /**
+     * @dev Get user entry time (time of first deposit)
+     * @param user Address of the user
+     * @return Entry time of the user
+     */
+    function getUserEntryTime(address user) external view returns (uint256);
+    
+    /**
+     * @dev Get total supply of user balances
+     * @return Total supply
+     */
+    function getTotalSupply() external view returns (uint256);
+    
+    /**
+     * @dev Get total time-weighted balances across all users
+     * @return Total time-weighted balance
+     */
+    function getTotalTimeWeightedShares() external view returns (uint256);
+    
+    /**
+     * @dev Get user time-weighted balance
+     * @param user Address of the user
+     * @return User's time-weighted balance
+     */
+    function getUserTimeWeightedShares(address user) external view returns (uint256);
     
     /**
      * @dev Get user balance 
@@ -39,36 +69,4 @@ interface IVault {
      * @return Balance of the account
      */
     function balanceOf(address account) external view returns (uint256);
-    
-    /**
-     * @dev Supply funds to a specific protocol
-     * @param protocolId ID of the protocol to supply to
-     * @param amount Amount to supply
-     */
-    function supplyToProtocol(uint256 protocolId, uint256 amount) external;
-    
-    /**
-     * @dev Add a protocol to active protocols
-     * @param protocolId ID of the protocol to add
-     */
-    function addActiveProtocol(uint256 protocolId) external;
-    
-    /**
-     * @dev Remove a protocol from active protocols
-     * @param protocolId ID of the protocol to remove
-     */
-    function removeActiveProtocol(uint256 protocolId) external;
-    
-    /**
-     * @dev Replace an active protocol with another
-     * @param oldProtocolId ID of the protocol to replace
-     * @param newProtocolId ID of the new protocol
-     */
-    function replaceActiveProtocol(uint256 oldProtocolId, uint256 newProtocolId) external;
-    
-    /**
-     * @dev Get the current redemption rate
-     * @return Current redemption rate with 18 decimals precision
-     */
-    function getRedemptionRate() external view returns (uint256);
 }

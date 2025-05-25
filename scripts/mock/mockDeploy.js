@@ -19,11 +19,19 @@ async function main() {
   const COMPOUND_PROTOCOL_ID = 2;
   const LAYERBANK_PROTOCOL_ID = 3;
 
-  // Step 1: Use already deployed MockUSDC
-  const mockUSDCAddress = "0x78bD59b3d9DAbDab8A39958E32dA04CCe9E2E6e8";
+  // Step 1: Use existing MockUSDC and attach 
+  const mockUSDCAddress = "0x213acfe550f8B1d7959c789405F2E8D2d900108a";
   const MockUSDC = await ethers.getContractFactory("MockUSDC");
   const mockUSDC = MockUSDC.attach(mockUSDCAddress);
   console.log("Using already deployed MockUSDC at:", mockUSDCAddress);
+
+  // Step 1: Deploy MockUSDC
+  // console.log("Deploying MockUSDC...");
+  // const MockUSDC = await ethers.getContractFactory("MockUSDC");
+  // const mockUSDC = await MockUSDC.deploy(deployer.address);
+  // await mockUSDC.deployed();
+  // const mockUSDCAddress = mockUSDC.address;
+  // console.log("MockUSDC deployed at:", mockUSDCAddress);
 
   // Step 2: Deploy protocol registry
   console.log("Deploying ProtocolRegistry...");
@@ -131,13 +139,12 @@ async function main() {
     console.error("Error registering adapters:", error.message);
   }
 
-  // Add active protocols to registry
+  // Add active protocols to registry and combined vault
   try {
-    await registry.addActiveProtocol(LAYERBANK_PROTOCOL_ID, overrides);
-    // You can add more active protocols if needed
-    console.log("Added Layerbank as active protocol");
+    await registry.setActiveProtocol(AAVE_PROTOCOL_ID, overrides);
+    console.log("Set Aave as active protocol");
   } catch (error) {
-    console.error("Error adding active protocol:", error.message);
+    console.error("Error setting active protocol:", error.message);
   }
 
   // Step 7: Deploy Combined Vault
@@ -147,6 +154,14 @@ async function main() {
   await vault.deployed();
   const vaultAddress = vault.address;
   console.log("CombinedVault deployed at:", vaultAddress);
+
+  // Add active protocols to combined vault
+  try {
+    await vault.addProtocol(AAVE_PROTOCOL_ID, overrides);
+    console.log("Added Aave as active protocol to combined vault");
+  } catch (error) {
+    console.error("Error adding active protocol to combined vault:", error.message);
+  }
 
   // Step 9: Deploy YieldOptimizer
   console.log("Deploying YieldOptimizer...");
