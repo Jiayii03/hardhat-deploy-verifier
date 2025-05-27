@@ -1,6 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
+/**
+ * @title AaveAdapter
+ * @notice Adapter contract for interacting with Aave V3 protocol
+ * @dev This adapter handles deposits, withdrawals, and yield harvesting for Aave V3
+ * 
+ * Key Features:
+ * - 1:1 asset to aToken conversion
+ * - Automatic interest accrual
+ * - Optional reward token harvesting
+ * - Principal tracking with interest compounding
+ * - Safety checks and balance verifications
+ */
+
 import "./interfaces/IProtocolAdapter.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -90,30 +103,33 @@ interface ISyncSwapRouter {
  * @dev Implements the IProtocolAdapter interface
  */
 contract AaveAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable {
-    // Aave Pool contract
+    // Core Aave contract for deposits and withdrawals
     IAavePoolMinimal public pool;
+
+    // Address that can call harvest and other management functions
+    address public authorizedCaller;
 
     // Optional contracts for reward token harvesting (may not be used on Scroll)
     IRewardsController public rewardsController;
     IPriceOracleGetter public priceOracle;
     ISyncSwapRouter public syncSwapRouter;
 
-    // Mapping of asset address to aToken address
+    // Maps underlying asset addresses to their corresponding aToken addresses
     mapping(address => address) public aTokens;
 
-    // Supported assets
+    // Tracks which assets are supported by this adapter
     mapping(address => bool) public supportedAssets;
 
-    // Protocol name
+    // Protocol identifier
     string private constant PROTOCOL_NAME = "Aave V3";
 
-    // Last harvest timestamp per asset
+    // Tracks last harvest time per asset to calculate time-based metrics
     mapping(address => uint256) public lastHarvestTimestamp;
 
     // Minimum reward amount to consider profitable after fees (per asset)
     mapping(address => uint256) public minRewardAmount;
 
-    // Track total principal per asset (including compounded interest)
+    // Tracks total principal per asset including compounded interest
     mapping(address => uint256) public totalPrincipal;
 
     // WETH address for swap paths (for future reward token swaps)
@@ -125,13 +141,26 @@ contract AaveAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable {
     // Events
     event Initialized(address indexed initializer);
 
+    /**
+     * @notice Ensures only owner or authorized caller can execute function
+     * @dev Used for critical functions like harvest and supply
+     */
+    modifier onlyOwnerOrAuthorized() {
+        require(
+            msg.sender == owner() || msg.sender == authorizedCaller,
+            "Not authorized"
+        );
+        _;
+    }
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
 
     /**
-     * @dev Initializer function
+     * @notice Initializes the adapter with Aave pool address
+     * @dev Called during proxy deployment
      * @param _poolAddress The address of the Aave Pool contract
      */
     function initialize(address _poolAddress) public initializer {
@@ -144,11 +173,12 @@ contract AaveAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable {
     }
 
     /**
-     * @dev Set external contract addresses (optional for Scroll without rewards)
-     * @param _rewardsController The address of Aave Rewards Controller
-     * @param _priceOracle The address of Aave price oracle
-     * @param _syncSwapRouter The address of the SyncSwap router
-     * @param _weth The address of WETH
+     * @notice Sets up external contract addresses for reward harvesting
+     * @dev Optional setup for networks with Aave rewards
+     * @param _rewardsController Aave's rewards controller
+     * @param _priceOracle Aave's price oracle
+     * @param _syncSwapRouter Router for swapping reward tokens
+     * @param _weth WETH address for swap paths
      */
     function setExternalContracts(
         address _rewardsController,
@@ -185,9 +215,10 @@ contract AaveAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable {
     }
 
     /**
-     * @dev Add a supported asset with its corresponding aToken
-     * @param asset The address of the asset to add
-     * @param aToken The address of the corresponding aToken
+     * @notice Adds a new asset to the adapter
+     * @dev Maps underlying asset to its aToken and sets default min reward amount
+     * @param asset The underlying asset address
+     * @param aToken The corresponding aToken address
      */
     function addSupportedAsset(
         address asset,
@@ -220,97 +251,100 @@ contract AaveAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable {
     function setMinRewardAmount(
         address asset,
         uint256 amount
-    ) external override onlyOwner {
+    ) external override onlyOwnerOrAuthorized {
         require(supportedAssets[asset], "Asset not supported");
         minRewardAmount[asset] = amount;
     }
 
     /**
-     * @dev Supply assets to Aave
-     * @param asset The address of the asset to supply
-     * @param amount The amount of the asset to supply
-     * @return The amount of underlying tokens that were successfully supplied
+     * @notice Supplies assets to Aave protocol
+     * @dev Handles asset transfer, approval, and supply to Aave
+     * @param asset The underlying asset address
+     * @param amount Amount to supply
+     * @return Amount successfully supplied
      */
     function supply(
         address asset,
         uint256 amount
-    ) external override returns (uint256) {
+    ) external override onlyOwnerOrAuthorized returns (uint256) {
         require(supportedAssets[asset], "Asset not supported");
         require(amount > 0, "Amount must be greater than 0");
 
         address aToken = aTokens[asset];
         require(aToken != address(0), "aToken not found");
 
-        // Transfer asset from sender to this contract
+        // Transfer and approve
         IERC20(asset).transferFrom(msg.sender, address(this), amount);
-
-        // Update total principal tracking
         totalPrincipal[asset] += amount;
-
-        // Approve Aave pool to spend asset
         IERC20(asset).approve(address(pool), amount);
 
-        // Supply asset to Aave, minting aTokens directly to the vault
+        // Supply to Aave
         pool.supply(asset, amount, msg.sender, 0);
 
         return amount;
     }
 
     /**
-     * @dev Withdraw assets from Aave
-     * @param asset The address of the asset to withdraw
-     * @param amount The amount of the asset to withdraw
-     * @return The actual amount withdrawn
+     * @notice Withdraws assets from Aave protocol
+     * @dev Handles aToken transfer, withdrawal, and asset transfer back to vault
+     * @param asset The underlying asset address
+     * @param amount Amount to withdraw
+     * @return Actual amount withdrawn
      */
     function withdraw(
         address asset,
         uint256 amount
-    ) external override returns (uint256) {
+    ) external override onlyOwnerOrAuthorized returns (uint256) {
         require(supportedAssets[asset], "Asset not supported");
         require(amount > 0, "Amount must be greater than 0");
 
         address aToken = aTokens[asset];
         require(aToken != address(0), "aToken not found");
 
-        // Calculate max withdrawal amount (total principal)
+        // Calculate safe withdrawal amount
         uint256 maxWithdrawal = totalPrincipal[asset];
         uint256 withdrawAmount = amount > maxWithdrawal ? maxWithdrawal : amount;
 
-        // Transfer aTokens from vault to adapter
+        // Transfer aTokens and verify balance
         IERC20(aToken).transferFrom(msg.sender, address(this), withdrawAmount);
+        uint256 aTokenBalance = IERC20(aToken).balanceOf(address(this));
+        withdrawAmount = withdrawAmount > aTokenBalance ? aTokenBalance : withdrawAmount;
 
-        // Get initial asset balance
+        if (withdrawAmount == 0) return 0;
+
+        // Withdraw and verify
         uint256 assetBalanceBefore = IERC20(asset).balanceOf(address(this));
-
-        // Withdraw asset from Aave to this contract
         pool.withdraw(asset, withdrawAmount, address(this));
-
-        // Verify the withdrawal - calculate actual amount received
         uint256 assetBalanceAfter = IERC20(asset).balanceOf(address(this));
         uint256 actualWithdrawn = assetBalanceAfter - assetBalanceBefore;
 
-        // Update total principal
+        // Update principal
         if(actualWithdrawn <= totalPrincipal[asset]){
             totalPrincipal[asset] -= actualWithdrawn;
         } else {
             totalPrincipal[asset] = 0;
         }
 
-        // Transfer withdrawn assets to vault
+        // Transfer to vault
         IERC20(asset).transfer(msg.sender, actualWithdrawn);
 
         return actualWithdrawn;
     }
 
     /**
-     * @dev Withdraw assets from Aave and send directly to user
-     * @param asset The address of the asset to withdraw
-     * @param amount The amount of the asset to withdraw
-     * @param user The address to receive the withdrawn assets
-     * @return The actual amount withdrawn
+     * @notice Withdraws assets directly to user
+     * @dev Similar to withdraw but sends assets directly to user
+     * @param asset The underlying asset address
+     * @param amount Amount to withdraw
+     * @param user Address to receive withdrawn assets
+     * @return Actual amount withdrawn
      */
-    function withdrawToUser(address asset, uint256 amount, address user) external override returns (uint256) {
-        require(supportedAssets[asset], "Asset not supported");
+    function withdrawToUser(
+        address asset, 
+        uint256 amount, 
+        address user
+    ) external override onlyOwnerOrAuthorized returns (uint256) {
+        require(supportedAssets[asset], "Asset not supported"); 
         require(amount > 0, "Amount must be greater than 0");
         require(user != address(0), "Invalid user address");
 
@@ -324,24 +358,32 @@ contract AaveAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable {
         // Transfer aTokens from vault to adapter
         IERC20(aToken).transferFrom(msg.sender, address(this), withdrawAmount);
 
+        // Get current aToken balance and apply safety check
+        uint256 aTokenBalance = IERC20(aToken).balanceOf(address(this));
+        withdrawAmount = withdrawAmount > aTokenBalance ? aTokenBalance : withdrawAmount;
+
+        if (withdrawAmount == 0) {
+            return 0;
+        }
+
         // Get initial user balance
         uint256 userBalanceBefore = IERC20(asset).balanceOf(user);
 
         // Withdraw asset from Aave directly to the user
         pool.withdraw(asset, withdrawAmount, user);
-        
+
         // Verify the withdrawal - calculate actual amount received
         uint256 userBalanceAfter = IERC20(asset).balanceOf(user);
-        uint256 actualReceived = userBalanceAfter - userBalanceBefore;
+        uint256 actualWithdrawn = userBalanceAfter - userBalanceBefore;
 
         // Update total principal
-        if(actualReceived <= totalPrincipal[asset]){
-            totalPrincipal[asset] -= actualReceived;
+        if(actualWithdrawn <= totalPrincipal[asset]){
+            totalPrincipal[asset] -= actualWithdrawn;
         } else {
             totalPrincipal[asset] = 0;
         }
 
-        return actualReceived;
+        return actualWithdrawn;
     }
 
     /**
@@ -365,24 +407,24 @@ contract AaveAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable {
         );
     }
 
-
     /**
-     * @dev Harvest yield from the protocol by compounding interest
-     * @param asset The address of the asset
-     * @return totalAssets The total amount of underlying assets in the protocol
+     * @notice Harvests yield from Aave protocol
+     * @dev Updates total principal and optionally claims rewards
+     * @param asset The underlying asset address
+     * @return totalAssets Total assets including accrued interest
      */
     function harvest(
         address asset
-    ) external override returns (uint256 totalAssets) {
+    ) external override onlyOwnerOrAuthorized returns (uint256 totalAssets) {
         require(supportedAssets[asset], "Asset not supported");
 
         address aToken = aTokens[asset];
         require(aToken != address(0), "aToken not found");
 
-        // aToken balance already includes accrued interest
+        // Get total assets including interest
         totalAssets = IERC20(aToken).balanceOf(msg.sender);
 
-        // Optional: Claim rewards
+        // Optional reward claiming
         if (address(rewardsController) != address(0)) {
             try this.claimAaveRewards(asset) {
                 // Success
@@ -391,6 +433,7 @@ contract AaveAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable {
             }
         }
 
+        // Update tracking variables
         totalPrincipal[asset] = totalAssets;
         lastHarvestTimestamp[asset] = block.timestamp;
 
@@ -426,18 +469,18 @@ contract AaveAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable {
     }
 
     /**
-     * @dev Get the current APY for an asset
-     * @param asset The address of the asset
-     * @return The current APY in basis points (1% = 100)
+     * @notice Gets current APY for an asset
+     * @dev Converts Aave's RAY units to basis points
+     * @param asset The underlying asset address
+     * @return APY in basis points (1% = 100)
      */
     function getAPY(address asset) external view override returns (uint256) {
         require(supportedAssets[asset], "Asset not supported");
 
-        // Get the current liquidity rate from Aave's pool
         DataTypes.ReserveDataLegacy memory reserveData = IPool(address(pool))
             .getReserveData(asset);
 
-        // Convert the liquidity rate from RAY units (1e27) to basis points (1% = 100)
+        // Convert RAY (1e27) to basis points (1% = 100)
         uint256 ONE_RAY = 1e27;
         uint256 apyBps = (reserveData.currentLiquidityRate * 10000) / ONE_RAY;
 
@@ -499,11 +542,11 @@ contract AaveAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable {
         return block.timestamp - lastHarvestTimestamp[asset];
     }
 
-    // Not sure about this function
     /**
-     * @dev Get current accrued interest (estimated)
-     * @param asset The address of the asset
-     * @return Estimated interest accrued since last harvest
+     * @notice Gets estimated accrued interest
+     * @dev Calculates interest based on Aave's liquidity index
+     * @param asset The underlying asset address
+     * @return Estimated interest amount
      */
     function getEstimatedInterest(
         address asset
@@ -513,18 +556,16 @@ contract AaveAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable {
         address aToken = aTokens[asset];
         require(aToken != address(0), "aToken not found");
 
-        // Get the current liquidity index from Aave's pool
+        // Get current exchange rate
         DataTypes.ReserveDataLegacy memory reserveData = IPool(address(pool))
             .getReserveData(asset);
-
-        // Calculate the exchange rate (liquidity index)
         uint256 exchangeRate = reserveData.liquidityIndex;
         
-        // Calculate the total value of aTokens in underlying assets
+        // Calculate total value
         uint256 aTokenBalance = IERC20(aToken).balanceOf(msg.sender);
-        uint256 totalValue = (aTokenBalance * exchangeRate) / 1e27; // Aave uses 1e27 as base unit
+        uint256 totalValue = (aTokenBalance * exchangeRate) / 1e27;
 
-        // Interest is the difference between total value and total principal
+        // Return interest as difference
         if (totalValue > totalPrincipal[asset]) {
             return totalValue - totalPrincipal[asset];
         }
@@ -544,6 +585,15 @@ contract AaveAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable {
         uint256 amount
     ) external onlyOwner {
         IERC20(token).transfer(to, amount);
+    }
+
+    /**
+     * @dev Allows the owner to set an authorized caller
+     * @param newCaller The new authorized caller address
+     */
+    function setAuthorizedCaller(address newCaller) external onlyOwner {
+        require(newCaller != address(0), "Invalid address");
+        authorizedCaller = newCaller;
     }
 
     /**

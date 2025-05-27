@@ -1,15 +1,25 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+/**
+ * @title ProtocolRegistry
+ * @notice Registry for managing protocol adapters with allocation support
+ * @dev Central registry for managing protocol adapters and their allocations
+ * 
+ * Key Features:
+ * - Protocol registration and management
+ * - Asset-specific adapter registration
+ * - Active protocol tracking
+ * - Protocol replacement functionality
+ * - Access control for authorized callers
+ * - Upgradeable contract design
+ */
+
 import "./interfaces/IRegistry.sol";
 import "../adapters/interfaces/IProtocolAdapter.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-/**
- * @title ProtocolRegistry
- * @notice Registry for managing protocol adapters with allocation support
- */
 contract ProtocolRegistry is IRegistry, Initializable, OwnableUpgradeable {
     // Protocol ID => Asset => Adapter
     mapping(uint256 => mapping(address => address)) public adapters;
@@ -36,7 +46,10 @@ contract ProtocolRegistry is IRegistry, Initializable, OwnableUpgradeable {
     event AuthorizedCallerUpdated(address indexed oldCaller, address indexed newCaller);
     event Initialized(address indexed initializer);
 
-    // Modifier to check if the caller is either the owner or the authorized caller
+    /**
+     * @notice Ensures only owner or authorized caller can execute function
+     * @dev Used for critical functions like protocol registration and adapter management
+     */
     modifier onlyOwnerOrAuthorized() {
         require(msg.sender == owner() || msg.sender == authorizedCaller, "Caller is not authorized");
         _;
@@ -48,7 +61,8 @@ contract ProtocolRegistry is IRegistry, Initializable, OwnableUpgradeable {
     }
 
     /**
-     * @dev Initializer function
+     * @notice Initializes the registry
+     * @dev Called during proxy deployment
      */
     function initialize() public initializer {
         __Ownable_init(msg.sender);
@@ -56,7 +70,8 @@ contract ProtocolRegistry is IRegistry, Initializable, OwnableUpgradeable {
     }
     
     /**
-     * @dev Register a protocol
+     * @notice Register a new protocol
+     * @dev Adds a protocol to the registry with a unique ID
      * @param protocolId The unique ID for the protocol
      * @param name The name of the protocol
      */
@@ -72,7 +87,8 @@ contract ProtocolRegistry is IRegistry, Initializable, OwnableUpgradeable {
     }
     
     /**
-     * @dev Register an adapter for a specific protocol and asset
+     * @notice Register an adapter for a specific protocol and asset
+     * @dev Maps an adapter to a protocol-asset pair
      * @param protocolId The ID of the protocol
      * @param asset The address of the asset
      * @param adapter The address of the adapter
@@ -87,7 +103,8 @@ contract ProtocolRegistry is IRegistry, Initializable, OwnableUpgradeable {
     }
     
     /**
-     * @dev Remove an adapter
+     * @notice Remove an adapter from the registry
+     * @dev Removes the mapping for a protocol-asset pair
      * @param protocolId The ID of the protocol
      * @param asset The address of the asset
      */
@@ -100,7 +117,8 @@ contract ProtocolRegistry is IRegistry, Initializable, OwnableUpgradeable {
     }
     
     /**
-     * @dev Add a protocol to the active protocols list
+     * @notice Add a protocol to the active protocols list
+     * @dev Adds a protocol to the list of protocols with user funds
      * @param protocolId The protocol ID to add
      */
     function addActiveProtocol(uint256 protocolId) external override onlyOwnerOrAuthorized {
@@ -118,7 +136,8 @@ contract ProtocolRegistry is IRegistry, Initializable, OwnableUpgradeable {
     }
     
     /**
-     * @dev Remove a protocol from the active protocols list
+     * @notice Remove a protocol from the active protocols list
+     * @dev Removes a protocol from the list of protocols with user funds
      * @param protocolId The protocol ID to remove
      */
     function removeActiveProtocol(uint256 protocolId) external override onlyOwnerOrAuthorized {
@@ -141,7 +160,8 @@ contract ProtocolRegistry is IRegistry, Initializable, OwnableUpgradeable {
     }
     
     /**
-     * @dev Replace an active protocol with another
+     * @notice Replace an active protocol with another
+     * @dev Swaps one active protocol for another while maintaining the list
      * @param oldProtocolId The protocol ID to remove
      * @param newProtocolId The protocol ID to add
      */
@@ -164,7 +184,8 @@ contract ProtocolRegistry is IRegistry, Initializable, OwnableUpgradeable {
     }
     
     /**
-     * @dev Set an authorized external caller (e.g., YieldOptimizer)
+     * @notice Set an authorized external caller
+     * @dev Allows another contract (e.g., YieldOptimizer) to call restricted functions
      * @param newCaller The address of the new authorized contract
      */
     function setAuthorizedCaller(address newCaller) external override onlyOwner {
@@ -174,7 +195,8 @@ contract ProtocolRegistry is IRegistry, Initializable, OwnableUpgradeable {
     }
 
     /**
-     * @dev Get the adapter for a specific protocol and asset
+     * @notice Get the adapter for a specific protocol and asset
+     * @dev Returns the adapter contract for a protocol-asset pair
      * @param protocolId The ID of the protocol
      * @param asset The address of the asset
      * @return The protocol adapter
@@ -187,7 +209,7 @@ contract ProtocolRegistry is IRegistry, Initializable, OwnableUpgradeable {
     }
     
     /**
-     * @dev Get all registered protocol IDs
+     * @notice Get all registered protocol IDs
      * @return Array of protocol IDs
      */
     function getAllProtocolIds() external view override returns (uint256[] memory) {
@@ -195,13 +217,19 @@ contract ProtocolRegistry is IRegistry, Initializable, OwnableUpgradeable {
     }
     
     /**
-     * @dev Get all active protocol IDs
+     * @notice Get all active protocol IDs
      * @return Array of active protocol IDs
      */
     function getActiveProtocolIds() external view override returns (uint256[] memory) {
         return activeProtocolIds;
     }
 
+    /**
+     * @notice Get active protocol ID by index
+     * @dev Returns the protocol ID at a specific index in the active protocols list
+     * @param index The index in the active protocols list
+     * @return The protocol ID
+     */
     function getActiveProtocolIdByIndex(uint256 index) external view returns (uint256) {
         require(index < activeProtocolIds.length, "Index out of bounds");
         require(activeProtocolIds.length > 0, "No active protocols");
@@ -209,7 +237,7 @@ contract ProtocolRegistry is IRegistry, Initializable, OwnableUpgradeable {
     }
     
     /**
-     * @dev Get the name of a protocol
+     * @notice Get the name of a protocol
      * @param protocolId The ID of the protocol
      * @return The name of the protocol
      */
@@ -221,7 +249,7 @@ contract ProtocolRegistry is IRegistry, Initializable, OwnableUpgradeable {
     }
     
     /**
-     * @dev Check if an adapter is registered for a protocol and asset
+     * @notice Check if an adapter is registered for a protocol and asset
      * @param protocolId The ID of the protocol
      * @param asset The address of the asset
      * @return True if an adapter is registered
@@ -231,7 +259,9 @@ contract ProtocolRegistry is IRegistry, Initializable, OwnableUpgradeable {
     }
 
     /**
-     * @dev Override transferOwnership to satisfy both IRegistry and OwnableUpgradeable
+     * @notice Transfer ownership of the registry
+     * @dev Override to satisfy both IRegistry and OwnableUpgradeable
+     * @param newOwner The address of the new owner
      */
     function transferOwnership(address newOwner) public override(IRegistry, OwnableUpgradeable) {
         super.transferOwnership(newOwner);

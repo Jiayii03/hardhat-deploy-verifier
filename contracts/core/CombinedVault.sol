@@ -1,6 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
+/**
+ * @title CombinedVault
+ * @notice A yield-generating vault that combines multiple DeFi protocols
+ * @dev Implements ERC4626 with custom redemption rate mechanism
+ * 
+ * Key Features:
+ * - Multi-protocol yield generation
+ * - Dynamic asset distribution across protocols
+ * - Redemption rate tracking for accurate share pricing
+ * - Virtual vault integration for queued deposits
+ * - Automatic yield harvesting and compounding
+ * - Protocol management (add/remove/replace)
+ * - Performance fee collection on yield
+ * - Safety checks and balance verifications
+ */
+
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
@@ -11,12 +27,8 @@ import "./interfaces/IRegistry.sol";
 import "../adapters/interfaces/IProtocolAdapter.sol";
 import "./interfaces/IVault.sol";
 import "./VirtualVault.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 
-/**
- * @title CombinedVault
- * @notice A yield-generating vault with improved time-weighted balance tracking
- * @dev Implements simple accounting without ERC20 shares
- */
 contract CombinedVault is
     Initializable,
     ERC4626Upgradeable,
@@ -26,31 +38,55 @@ contract CombinedVault is
 {
     using SafeERC20 for IERC20;
 
-    // Protocol registry
+    // Protocol registry for managing adapters and active protocols
     IRegistry public registry;
 
     // Underlying asset (e.g., USDC)
     IERC20 private _asset;
 
-    // Precision for calculations
+    // Precision for calculations (12 decimals)
     uint256 public constant PRECISION = 1e12;
 
-    // Add redemption rate tracking
-    uint256 public redemptionRate; // Initial 1:1 rate with 18 decimals precision
-    uint256 public previousRedemptionRate; // Track previous redemption rate
+    // Redemption rate tracking (18 decimals precision)
+    uint256 public redemptionRate; // Current rate for share/asset conversion
+    uint256 public previousRedemptionRate; // Previous rate for change detection
 
-    // Virtual vault
+    // Virtual vault for handling queued deposits
     VirtualVault public virtualVault;
 
+    // Address that can call harvest and other management functions
     address public authorizedCaller;
+
+    // Performance fee configuration
+    address public treasury; // Address that receives performance fees
+    uint256 public performanceFeeBps; // Fee in basis points (1% = 100, max 10% = 1000)
+    uint256 public constant BASIS_POINTS = 10000; // 100%
 
     // Events
     event Deposited(
         address indexed user,
         uint256 assetAmount,
+        uint256 shares,
+        uint256 receiptTokenBalance,
+        uint256 actualAssetValue,
+        uint256 walletBalance,
+        uint256 totalUserAssets,
+        uint256 totalSupply,
+        uint256 redemptionRate,
         uint256 depositTimestamp
     );
-    event Withdrawn(address indexed user, uint256 amount);
+    event Withdrawn(
+        address indexed user,
+        uint256 assetAmount,
+        uint256 shares,
+        uint256 receiptTokenBalance,
+        uint256 actualAssetValue,
+        uint256 walletBalance,
+        uint256 totalUserAssets,
+        uint256 totalSupply,
+        uint256 redemptionRate,
+        uint256 withdrawTimestamp
+    );
     event Harvested(
         uint256 timestamp,
         uint256 totalAssets,
@@ -64,12 +100,20 @@ contract CombinedVault is
         address indexed newCaller
     );
     event Initialized(address indexed initializer);
+    event VirtualVaultSet(address indexed virtualVault);
+    event PerformanceFeeUpdated(uint256 oldFee, uint256 newFee);
+    event TreasuryUpdated(address oldTreasury, address newTreasury);
+    event PerformanceFeeCollected(uint256 amount, uint256 timestamp);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
 
+    /**
+     * @notice Ensures only owner or authorized caller can execute function
+     * @dev Used for critical functions like harvest and protocol management
+     */
     modifier onlyOwnerOrAuthorized() {
         require(
             msg.sender == owner() || msg.sender == authorizedCaller,
@@ -79,16 +123,23 @@ contract CombinedVault is
     }
 
     /**
-     * @dev Initializer function
+     * @notice Initializes the vault with asset and registry
+     * @dev Called during proxy deployment
      * @param assetAddress Address of the underlying asset
      * @param _registry Address of the protocol registry
+     * @param _treasury Address that will receive performance fees
+     * @param _performanceFeeBps Performance fee in basis points (1% = 100, max 10% = 1000)
      */
     function initialize(
         address assetAddress,
-        address _registry
+        address _registry,
+        address _treasury,
+        uint256 _performanceFeeBps
     ) public initializer {
         require(assetAddress != address(0), "Invalid asset");
         require(_registry != address(0), "Invalid registry");
+        require(_treasury != address(0), "Invalid treasury");
+        require(_performanceFeeBps <= 1000, "Fee too high"); // Max 10%
 
         __ERC4626_init(IERC20(assetAddress));
         __ERC20_init("Combined Vault Token", "cVT");
@@ -98,13 +149,16 @@ contract CombinedVault is
         registry = IRegistry(_registry);
         _asset = IERC20(assetAddress);
         redemptionRate = 1e18; // Initial 1:1 rate
+        treasury = _treasury;
+        performanceFeeBps = _performanceFeeBps;
 
         emit Initialized(msg.sender);
     }
 
     /**
-     * @dev Allows the owner to set an authorized caller (e.g., YieldOptimizer or Chainlink automation).
-     * @param newCaller The new authorized caller address.
+     * @notice Sets authorized caller address
+     * @dev Used for automation contracts or yield optimizers
+     * @param newCaller New authorized caller address
      */
     function setAuthorizedCaller(address newCaller) external onlyOwner {
         require(newCaller != address(0), "Invalid address");
@@ -112,9 +166,15 @@ contract CombinedVault is
         authorizedCaller = newCaller;
     }
 
+    /**
+     * @notice Sets the virtual vault address
+     * @dev Virtual vault handles queued deposits
+     * @param _vault Address of the virtual vault
+     */
     function setVirtualVault(address _vault) external onlyOwner {
         require(_vault != address(0), "Invalid address");
         virtualVault = VirtualVault(_vault);
+        emit VirtualVaultSet(_vault);
     }
 
     /**
@@ -123,7 +183,7 @@ contract CombinedVault is
      */
     function transferOwnership(
         address newOwner
-    ) public override(OwnableUpgradeable) {
+    ) public override onlyOwner {
         require(
             newOwner != address(0),
             "CombinedVault: new owner is the zero address"
@@ -134,11 +194,11 @@ contract CombinedVault is
     }
 
     /**
-     * @dev Add a protocol to active protocols
+     * @notice Adds a protocol to active protocols
+     * @dev Verifies protocol registration and adapter availability
      * @param protocolId ID of the protocol to add
      */
-    function addActiveProtocol(uint256 protocolId) external override onlyOwner {
-        // Check if the protocol is registered in the registry
+    function addActiveProtocol(uint256 protocolId) external override onlyOwnerOrAuthorized {
         require(
             bytes(registry.getProtocolName(protocolId)).length > 0,
             "Protocol not registered"
@@ -148,29 +208,32 @@ contract CombinedVault is
             "No adapter for this asset"
         );
 
-        // Add to active protocols through the registry
         registry.addActiveProtocol(protocolId);
-
         emit ProtocolAdded(protocolId);
     }
 
     /**
-     * @dev Remove a protocol from active protocols
+     * @notice Removes a protocol and redistributes assets
+     * @dev Withdraws all funds before removal
      * @param protocolId ID of the protocol to remove
      */
-    function removeActiveProtocol(
-        uint256 protocolId
-    ) external override onlyOwner {
-        // Withdraw all funds from this protocol first
-        _withdrawAllFromProtocol(protocolId);
+    function removeActiveProtocol(uint256 protocolId) external override onlyOwnerOrAuthorized {        
+        uint256[] memory activeProtocols = registry.getActiveProtocolIds();
+        require(activeProtocols.length > 1, "Cannot remove last protocol");
 
-        // Remove from active protocols through the registry
+        _withdrawAllFromProtocol(protocolId);
         registry.removeActiveProtocol(protocolId);
         emit ProtocolRemoved(protocolId);
+
+        uint256[] memory remainingProtocols = registry.getActiveProtocolIds();
+        if (remainingProtocols.length > 0) {
+            _distributeAssets();
+        }
     }
 
     /**
-     * @dev Replace an active protocol with another
+     * @notice Replaces one protocol with another
+     * @dev Verifies new protocol registration and adapter
      * @param oldProtocolId ID of the protocol to replace
      * @param newProtocolId ID of the new protocol
      */
@@ -178,7 +241,6 @@ contract CombinedVault is
         uint256 oldProtocolId,
         uint256 newProtocolId
     ) external override onlyOwner {
-        // Check if the new protocol is registered in the registry
         require(
             bytes(registry.getProtocolName(newProtocolId)).length > 0,
             "New protocol not registered"
@@ -188,39 +250,40 @@ contract CombinedVault is
             "No adapter for new protocol"
         );
 
-        // Replace in the registry
         registry.replaceActiveProtocol(oldProtocolId, newProtocolId);
-
         emit ProtocolRemoved(oldProtocolId);
         emit ProtocolAdded(newProtocolId);
     }
 
     /**
-     * @dev Calculate how many shares a user will receive for depositing assets
+     * @notice Calculates shares for a deposit amount
+     * @dev Uses redemption rate for conversion
      * @param assets Amount of assets being deposited
      * @return shares Amount of shares to be minted
      */
     function previewDeposit(
         uint256 assets
-    ) public view override returns (uint256) {
+    ) public view override(ERC4626Upgradeable, IVault) returns (uint256) {
         if (redemptionRate == 1e18) return assets; // 1:1 for first deposit
         return (assets * 1e18) / redemptionRate;
     }
 
     /**
-     * @dev Calculate how many assets are needed to mint a specific number of shares
+     * @notice Calculates assets needed for desired shares
+     * @dev Uses redemption rate with round-up for safety
      * @param shares Amount of shares desired
      * @return assets Amount of assets needed
      */
     function previewMint(
         uint256 shares
-    ) public view override returns (uint256) {
+    ) public view override(ERC4626Upgradeable, IVault) returns (uint256) {
         if (redemptionRate == 1e18) return shares; // 1:1 for first deposit
-        return (shares * redemptionRate) / 1e18;
+        return Math.ceilDiv(shares * redemptionRate, 1e18);
     }
 
     /**
-     * @dev Deposit assets into the vault
+     * @notice Deposits assets into the vault
+     * @dev Distributes assets across protocols and mints shares
      * @param user Address of the user to deposit for
      * @param amount Amount of assets to deposit
      */
@@ -230,29 +293,53 @@ contract CombinedVault is
     ) external override nonReentrant {
         require(user != address(0), "Invalid user");
         require(amount > 0, "Deposit must be > 0");
-
-        // Get active protocols from registry
+        
         uint256[] memory activeProtocolIds = registry.getActiveProtocolIds();
         require(activeProtocolIds.length > 0, "No active protocols");
 
-        // Transfer assets from sender to this contract
-        _asset.transferFrom(msg.sender, address(this), amount);
-
-        // Distribute funds to protocols first
+        // Transfer and distribute
+        SafeERC20.safeTransferFrom(_asset, msg.sender, address(this), amount);
         _distributeAssets();
 
-        // Calculate and mint receipt tokens after distribution
-        uint256 receiptTokens = previewDeposit(amount);
+        // Mint shares and emit event
+        uint256 receiptTokens = convertToShares(amount);
         _mint(user, receiptTokens);
 
-        emit Deposited(user, amount, block.timestamp);
+        uint256 walletBalance = _asset.balanceOf(user);
+        uint256 vaultPosition = convertToAssets(balanceOf(user));
+        uint256 totalUserAssets = walletBalance + vaultPosition;
+
+        emit Deposited(
+            user,
+            amount,
+            receiptTokens,
+            balanceOf(user),
+            vaultPosition,
+            walletBalance,
+            totalUserAssets,
+            totalSupply(),
+            redemptionRate,
+            block.timestamp
+        );
     }
 
     /**
-     * @dev Override of ERC4626 withdraw function
+     * @notice Converts assets to shares with round-up
+     * @dev Internal helper for withdrawal calculations
+     * @param assets Amount of assets to convert
+     * @return shares Amount of shares
+     */
+    function convertAssetsToSharesRoundUp(uint256 assets) internal view returns (uint256) {
+        if (redemptionRate == 1e18) return assets;
+        return Math.ceilDiv(assets * 1e18, redemptionRate);
+    }
+
+    /**
+     * @notice Withdraws assets from the vault
+     * @dev Handles protocol withdrawals and share burning
      * @param assets Amount of assets to withdraw
      * @param receiver Address receiving the assets
-     * @param owner Address that owns the shares being burned
+     * @param owner Address that owns the shares
      * @return Amount of assets withdrawn
      */
     function withdraw(
@@ -264,7 +351,7 @@ contract CombinedVault is
         require(receiver != address(0), "Invalid receiver");
         require(owner != address(0), "Invalid owner");
 
-        // Check allowance and balance for the case where msg.sender != owner
+        // Check allowance for non-owner withdrawals
         if (msg.sender != owner) {
             uint256 allowed = allowance(owner, msg.sender);
             if (allowed != type(uint256).max) {
@@ -272,31 +359,53 @@ contract CombinedVault is
             }
         }
 
-        // Calculate shares to burn based on current redemption rate
-        uint256 totalSupplyBefore = totalSupply();
         uint256 ownerBalanceBefore = balanceOf(owner);
+        require(ownerBalanceBefore > 0, "No shares to withdraw");
 
-        uint256 shares = convertToShares(assets);
-        require(shares <= ownerBalanceBefore, "Insufficient shares");
-        require(shares <= totalSupplyBefore, "Shares exceed total supply");
-
-        // Withdraw funds from protocols first
-        uint256 actualWithdrawnAmount = _withdrawFromProtocols(
-            assets,
-            receiver
-        );
+        // Withdraw and burn
+        uint256 actualWithdrawnAmount = _withdrawFromProtocols(assets, receiver);
         require(actualWithdrawnAmount > 0, "Withdrawal failed");
 
-        // Burn shares
-        _burn(owner, shares);
+        uint256 sharesToBurn = Math.min(
+            convertAssetsToSharesRoundUp(actualWithdrawnAmount),
+            ownerBalanceBefore
+        );
 
-        emit Withdraw(msg.sender, receiver, owner, assets, shares);
+        _burn(owner, sharesToBurn);
+        
+        // Update redemption rate
+        if (totalSupply() > 0) {
+            redemptionRate = (totalAssets() * 1e18) / totalSupply();
+        } else {
+            redemptionRate = 1e18;
+        }
+
+        // Calculate and emit event
+        uint256 walletBalance = _asset.balanceOf(owner);
+        uint256 vaultPosition = convertToAssets(balanceOf(owner));
+        uint256 totalUserAssets = walletBalance + vaultPosition;
+
+        emit Withdrawn(
+            owner,
+            actualWithdrawnAmount,
+            sharesToBurn,
+            balanceOf(owner),
+            vaultPosition,
+            walletBalance,
+            totalUserAssets,
+            totalSupply(),
+            redemptionRate,
+            block.timestamp
+        );
 
         return actualWithdrawnAmount;
     }
 
     /**
-     * @dev Check and harvest yield from all protocols
+     * @notice Harvests yield and updates redemption rate
+     * @dev Processes all protocols, collects performance fee, and flushes virtual vault if needed
+     * Performance fee is calculated based on redemption rate increase and minted as shares to treasury
+     * @return harvestedAmount Total assets after harvesting
      */
     function accrueAndFlush()
         external
@@ -304,22 +413,48 @@ contract CombinedVault is
         onlyOwnerOrAuthorized
         returns (uint256 harvestedAmount)
     {
-        uint256 totalAssets = _harvestAllProtocols();
+        require(address(virtualVault) != address(0), "Virtual vault not set");
 
+        // Harvest from all protocols
+        uint256 totalAssets = _harvestAllProtocols();
         totalAssets += _asset.balanceOf(address(this));
 
-        // Update redemption rate based on total assets
-        previousRedemptionRate = redemptionRate; // Store previous rate
+        // Store previous rate before any updates
+        previousRedemptionRate = redemptionRate;
 
-        // Check if there's any supply before calculating redemption rate
         uint256 currentSupply = totalSupply();
         if (currentSupply == 0) {
             redemptionRate = 1e18;
         } else {
-            redemptionRate = (totalAssets * 1e18) / currentSupply;
+            // Calculate new redemption rate before fee
+            uint256 newRedemptionRate = (totalAssets * 1e18) / currentSupply;
+            
+            // Only apply performance fee on positive gain
+            if (newRedemptionRate > previousRedemptionRate) {
+                uint256 gainPerShare = newRedemptionRate - previousRedemptionRate;
+                uint256 performanceFeePerShare = (gainPerShare * performanceFeeBps) / BASIS_POINTS;
+                
+                // Calculate fee in assets
+                uint256 feeAssets = (performanceFeePerShare * currentSupply) / 1e18;
+                
+                if (feeAssets > 0) {
+                    // Calculate shares to mint to treasury based on fee assets
+                    uint256 treasuryShares = (feeAssets * 1e18) / newRedemptionRate;
+
+                    // Mint shares to treasury
+                    _mint(treasury, treasuryShares);
+                    emit PerformanceFeeCollected(feeAssets, block.timestamp);
+                }
+            }
+            
+            // Update redemption rate with new total supply
+            redemptionRate = (totalAssets * 1e18) / totalSupply();
+            if (redemptionRate == 0) {
+                redemptionRate = 1e18;
+            }
         }
 
-        // flush to combined vault
+        // Flush virtual vault if rate changed or empty
         if (previousRedemptionRate != redemptionRate || totalSupply() == 0) {
             virtualVault.flushToCombinedVault();
         }
@@ -334,7 +469,8 @@ contract CombinedVault is
     }
 
     /**
-     * @dev Supply funds to a specific protocol
+     * @notice Supplies funds to a specific protocol
+     * @dev Handles approval and supply through adapter
      * @param protocolId ID of the protocol to supply to
      * @param amount Amount to supply
      */
@@ -350,20 +486,37 @@ contract CombinedVault is
         );
         require(address(adapter) != address(0), "Invalid protocol adapter");
 
-        // Approve the protocol adapter to spend the vault's funds
-        _asset.approve(address(adapter), amount);
-
-        // Supply funds to the new protocol
+        SafeERC20.forceApprove(_asset, address(adapter), amount);
         uint256 supplied = adapter.supply(address(_asset), amount);
         require(supplied > 0, "Supply failed");
     }
 
     /**
-     * @dev Get the current redemption rate
-     * @return Current redemption rate with 18 decimals precision
+     * @notice Gets current redemption rate
+     * @return Current redemption rate with 18 decimals
      */
     function getRedemptionRate() external view returns (uint256) {
         return redemptionRate;
+    }
+
+    /**
+     * @notice Gets user's staked balance
+     * @dev Excludes wallet balance
+     * @param user Address of the user
+     * @return stakedBalance Amount of assets staked
+     */
+    function getUserStakedBalance(address user) external view returns (uint256) {
+        return convertToAssets(balanceOf(user));
+    }
+
+    /**
+     * @notice Gets user's total balance including wallet
+     * @dev Includes both staked and wallet balance
+     * @param user Address of the user
+     * @return totalBalance Total user balance
+     */
+    function getUserTotalBalance(address user) external view returns (uint256) {
+        return _asset.balanceOf(user) + convertToAssets(balanceOf(user));
     }
 
     function balanceOf(
@@ -377,7 +530,6 @@ contract CombinedVault is
      */
     function _distributeAssets() internal {
         // Get active protocols from registry
-
         uint256 balance = _asset.balanceOf(address(this));
 
         uint256[] memory activeProtocolIds = registry.getActiveProtocolIds();
@@ -396,8 +548,8 @@ contract CombinedVault is
             );
             require(address(adapter) != address(0), "Invalid adapter");
 
-            // Approve the protocol adapter to spend our funds
-            _asset.approve(address(adapter), amountPerProtocol);
+            // Approve the protocol adapter to spend our funds using SafeERC20
+            SafeERC20.forceApprove(_asset, address(adapter), amountPerProtocol);
 
             // Supply to the protocol
             uint256 supplied = adapter.supply(
@@ -421,17 +573,30 @@ contract CombinedVault is
         uint256[] memory activeProtocolIds = registry.getActiveProtocolIds();
         if (activeProtocolIds.length == 0 || amount == 0) return 0;
 
-        // Distribute withdrawal evenly across all active protocols
-        uint256 amountPerProtocol = amount / activeProtocolIds.length;
         uint256 totalWithdrawn = 0;
 
         for (uint i = 0; i < activeProtocolIds.length; i++) {
-            totalWithdrawn += _withdrawFromSingleProtocol(
-                activeProtocolIds[i], 
-                amountPerProtocol, 
+            // Calculate remaining amount to withdraw
+            uint256 remaining = amount - totalWithdrawn;
+            if (remaining == 0) break;
+
+            // Get protocol balance
+            IProtocolAdapter adapter = registry.getAdapter(activeProtocolIds[i], address(_asset));
+            uint256 protocolBalance = adapter.getBalance(address(_asset));
+            
+            // If protocol has no balance, skip to next protocol
+            if (protocolBalance == 0) continue;
+
+            // Try to withdraw remaining amount from this protocol
+            uint256 withdrawn = _withdrawFromSingleProtocol(
+                activeProtocolIds[i],
+                remaining,
                 user
             );
+
+            totalWithdrawn += withdrawn;
         }
+
         return totalWithdrawn;
     }
 
@@ -483,13 +648,8 @@ contract CombinedVault is
      * @dev Internal function to withdraw all funds from a specific protocol
      * @param protocolId ID of the protocol
      */
-    function _withdrawAllFromProtocol(
-        uint256 protocolId
-    ) public onlyOwnerOrAuthorized {
-        IProtocolAdapter adapter = registry.getAdapter(
-            protocolId,
-            address(_asset)
-        );
+    function _withdrawAllFromProtocol(uint256 protocolId) public onlyOwnerOrAuthorized {
+        IProtocolAdapter adapter = registry.getAdapter(protocolId, address(_asset));
 
         // Get protocol's receipt token
         address receiptToken = adapter.getReceiptToken(address(_asset));
@@ -499,14 +659,19 @@ contract CombinedVault is
         uint256 balance = IERC20(receiptToken).balanceOf(address(this));
 
         if (balance > 0) {
-            // Approve the adapter to transfer receipt tokens if needed
-            IERC20(receiptToken).approve(address(adapter), balance);
+            // Get approval instructions from adapter
+            (address target, bytes memory data) = adapter.getApprovalCalldata(
+                address(_asset),
+                balance
+            );
 
-            // Transfer receipt tokens to adapter
-            IERC20(receiptToken).transfer(address(adapter), balance);
+            // Execute the approval call
+            (bool success, ) = target.call(data);
+            require(success, "Approval failed");
 
             // Withdraw all funds
             uint256 withdrawn = adapter.withdraw(address(_asset), balance);
+            require(withdrawn > 0, "Withdrawal failed");
         }
     }
 
@@ -523,14 +688,7 @@ contract CombinedVault is
                 protocolId,
                 address(_asset)
             );
-            // Approve the adapter to spend all aTokens before harvesting
-            address aToken = adapter.getReceiptToken(address(_asset));
-            if (aToken != address(0)) {
-                IERC20(aToken).approve(
-                    address(adapter),
-                    IERC20(aToken).balanceOf(address(this))
-                );
-            }
+            
             // Harvest and get total assets (including yield)
             uint256 protocolAssets = adapter.harvest(address(_asset));
             if (protocolAssets > 0) {
@@ -579,8 +737,10 @@ contract CombinedVault is
      */
     function convertToShares(
         uint256 assets
-    ) public view override returns (uint256) {
-        return previewDeposit(assets);
+    ) public view override(ERC4626Upgradeable, IVault) returns (uint256) {
+        if (redemptionRate == 1e18) return assets;
+        // Round down to avoid giving too many shares
+        return (assets * 1e18) / redemptionRate;
     }
 
     /**
@@ -590,8 +750,9 @@ contract CombinedVault is
      */
     function convertToAssets(
         uint256 shares
-    ) public view override returns (uint256) {
-        return previewMint(shares);
+    ) public view override(ERC4626Upgradeable, IVault) returns (uint256) {
+        if (redemptionRate == 1e18) return shares;
+        return Math.ceilDiv(shares * redemptionRate, 1e18);
     }
 
     /**
@@ -601,7 +762,8 @@ contract CombinedVault is
      */
     function previewRedeem(
         uint256 shares
-    ) public view override returns (uint256) {
+    ) public view override(ERC4626Upgradeable, IVault) returns (uint256) {
+        // Round down to ensure safety (avoid reverts)
         return convertToAssets(shares);
     }
 
@@ -614,7 +776,7 @@ contract CombinedVault is
     function mint(
         uint256 shares,
         address receiver
-    ) public override returns (uint256) {
+    ) public override(ERC4626Upgradeable, IVault) returns (uint256) {
         uint256 assets = previewMint(shares);
         deposit(assets, receiver);
         return assets;
@@ -631,10 +793,20 @@ contract CombinedVault is
         uint256 shares,
         address receiver,
         address owner
-    ) public override returns (uint256) {
+    ) public override(ERC4626Upgradeable, IVault) returns (uint256) {
         uint256 assets = previewRedeem(shares);
         withdraw(assets, receiver, owner);
         return assets;
+    }
+
+    /**
+     * @notice Sets the performance fee
+     * @param _performanceFeeBps New fee in basis points (1% = 100, max 10% = 1000)
+     */
+    function setPerformanceFee(uint256 _performanceFeeBps) external onlyOwner {
+        require(_performanceFeeBps <= 1000, "Fee too high"); // Max 10%
+        emit PerformanceFeeUpdated(performanceFeeBps, _performanceFeeBps);
+        performanceFeeBps = _performanceFeeBps;
     }
 
     /**

@@ -95,6 +95,9 @@ contract LayerBankAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable
     // LayerBank Core contract
     ILayerBankCore public core;
 
+    // Authorized caller address
+    address public authorizedCaller;
+
     // Optional contracts for reward token harvesting (may not be used on Scroll)
     ILayerBankRewards public rewardsController;
     IPriceCalculator public priceCalculator;
@@ -136,6 +139,14 @@ contract LayerBankAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable
 
     // Events
     event Initialized(address indexed initializer);
+
+    modifier onlyOwnerOrAuthorized() {
+        require(
+            msg.sender == owner() || msg.sender == authorizedCaller,
+            "Not authorized"
+        );
+        _;
+    }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -240,7 +251,7 @@ contract LayerBankAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable
     function setMinRewardAmount(
         address asset,
         uint256 amount
-    ) external override onlyOwner {
+    ) external override onlyOwnerOrAuthorized {
         require(supportedAssets[asset], "Asset not supported");
         minRewardAmount[asset] = amount;
     }
@@ -254,7 +265,7 @@ contract LayerBankAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable
     function supply(
         address asset,
         uint256 amount
-    ) external override returns (uint256) {
+    ) external override onlyOwnerOrAuthorized returns (uint256) {
         require(supportedAssets[asset], "Asset not supported");
         require(amount > 0, "Amount must be greater than 0");
 
@@ -302,7 +313,7 @@ contract LayerBankAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable
     function withdraw(
         address asset,
         uint256 amount
-    ) external override returns (uint256) {
+    ) external override onlyOwnerOrAuthorized returns (uint256) {
         require(supportedAssets[asset], "Asset not supported");
         require(amount > 0, "Amount must be greater than 0");
 
@@ -328,10 +339,16 @@ contract LayerBankAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable
 
         // Check if vault has enough gTokens
         uint256 vaultGTokenBalance = IERC20(gToken).balanceOf(msg.sender);
-        require(
-            vaultGTokenBalance >= gTokenAmount,
-            "Insufficient gToken balance"
-        );
+        
+        // Safety check: Cap gToken amount to available balance
+        gTokenAmount = gTokenAmount > vaultGTokenBalance ? vaultGTokenBalance : gTokenAmount;
+        
+        // Recalculate withdrawAmount based on capped gToken amount
+        withdrawAmount = (gTokenAmount * exchangeRate) / 1e18;
+
+        if (withdrawAmount == 0) {
+            return 0;
+        }
 
         // transfer gToken from vault to adapter
         IERC20(gToken).transferFrom(msg.sender, address(this), gTokenAmount);
@@ -348,21 +365,17 @@ contract LayerBankAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable
             }
         }
 
-        // Calculate actual amount withdrawn
-        uint256 assetBalanceAfter = IERC20(asset).balanceOf(address(this));
-        uint256 actualWithdrawn = assetBalanceAfter;
-
-        // Update total principal
-        if (actualWithdrawn <= totalPrincipal[asset]) {
-            totalPrincipal[asset] -= actualWithdrawn;
+        // Update total principal using the safeguarded withdrawAmount
+        if (withdrawAmount <= totalPrincipal[asset]) {
+            totalPrincipal[asset] -= withdrawAmount;
         } else {
             totalPrincipal[asset] = 0;
         }
 
         // Transfer withdrawn assets to vault
-        IERC20(asset).transfer(msg.sender, actualWithdrawn);
+        IERC20(asset).transfer(msg.sender, withdrawAmount);
 
-        return actualWithdrawn;
+        return withdrawAmount;
     }
 
     /**
@@ -376,7 +389,7 @@ contract LayerBankAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable
         address asset,
         uint256 amount,
         address user
-    ) external override returns (uint256) {
+    ) external override onlyOwnerOrAuthorized returns (uint256) {
         require(supportedAssets[asset], "Asset not supported");
         require(amount > 0, "Amount must be greater than 0");
         require(user != address(0), "Invalid user address");
@@ -403,10 +416,16 @@ contract LayerBankAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable
 
         // Check if vault has enough gTokens
         uint256 vaultGTokenBalance = IERC20(gToken).balanceOf(msg.sender);
-        require(
-            vaultGTokenBalance >= gTokenAmount,
-            "Insufficient gToken balance"
-        );
+        
+        // Safety check: Cap gToken amount to available balance
+        gTokenAmount = gTokenAmount > vaultGTokenBalance ? vaultGTokenBalance : gTokenAmount;
+        
+        // Recalculate withdrawAmount based on capped gToken amount
+        withdrawAmount = (gTokenAmount * exchangeRate) / 1e18;
+
+        if (withdrawAmount == 0) {
+            return 0;
+        }
 
         // transfer gToken from vault to adapter
         IERC20(gToken).transferFrom(msg.sender, address(this), gTokenAmount);
@@ -423,21 +442,14 @@ contract LayerBankAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable
             }
         }
 
-        // Calculate actual amount received
-        uint256 assetBalanceAfter = IERC20(asset).balanceOf(address(this));
-        uint256 actualWithdrawn = assetBalanceAfter;
-
-        // Update total principal
-        if (actualWithdrawn <= totalPrincipal[asset]) {
-            totalPrincipal[asset] -= actualWithdrawn;
+        // Update total principal using the safeguarded withdrawAmount
+        if (withdrawAmount <= totalPrincipal[asset]) {
+            totalPrincipal[asset] -= withdrawAmount;
         } else {
             totalPrincipal[asset] = 0;
         }
 
-        // Transfer withdrawn assets to user
-        IERC20(asset).transfer(user, actualWithdrawn);
-
-        return actualWithdrawn;
+        return withdrawAmount;
     }
 
     function getApprovalCalldata(address asset, uint256 amount) external view returns (address target, bytes memory data) {
@@ -451,7 +463,7 @@ contract LayerBankAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable
      */
     function harvest(
         address asset
-    ) external override returns (uint256 harvestedAmount) {
+    ) external override onlyOwnerOrAuthorized returns (uint256 harvestedAmount) {
         require(supportedAssets[asset], "Asset not supported");
 
         address gToken = gTokens[asset];
@@ -700,6 +712,15 @@ contract LayerBankAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable
         uint256 amount
     ) external onlyOwner {
         IERC20(token).transfer(to, amount);
+    }
+
+    /**
+     * @dev Allows the owner to set an authorized caller
+     * @param newCaller The new authorized caller address
+     */
+    function setAuthorizedCaller(address newCaller) external onlyOwner {
+        require(newCaller != address(0), "Invalid address");
+        authorizedCaller = newCaller;
     }
 
     /**

@@ -11,19 +11,15 @@ contract YieldOptimizer is Initializable, OwnableUpgradeable {
     IRegistry public registry;
     CombinedVault public vault;
     IERC20 public asset;
-    
-    // Maximum number of active protocols
-    uint256 public maxActiveProtocols;
+
+    address public authorizedCaller;
     
     // Minimum APY difference required to trigger protocol replacement (in basis points)
     uint256 public minApyDifference;
     
-    // Cooldown period between optimizations for each protocol (in seconds)
-    uint256 public optimizationCooldown;
+    // Target number of active protocols to maintain
+    uint256 public targetActiveProtocolCount;
     
-    // Protocol ID => last optimization timestamp
-    mapping(uint256 => uint256) public lastOptimized;
-
     // Struct to track protocol IDs and their APYs
     struct ProtocolAPY {
         uint256 protocolId;
@@ -31,11 +27,11 @@ contract YieldOptimizer is Initializable, OwnableUpgradeable {
         bool isActive;
     }
 
-    event OptimizedYield(uint256 replacedProtocolId, uint256 newProtocolId, uint256 amount);
-    event MaxActiveProtocolsUpdated(uint256 oldValue, uint256 newValue);
+    event OptimizedYield(uint256[] oldProtocolIds, uint256[] newProtocolIds, uint256 amount);
     event MinApyDifferenceUpdated(uint256 oldValue, uint256 newValue);
-    event OptimizationCooldownUpdated(uint256 oldValue, uint256 newValue);
+    event TargetActiveProtocolCountUpdated(uint256 oldValue, uint256 newValue);
     event Initialized(address indexed initializer, address vault, address assetAddress);
+    event AuthorizedCallerUpdated(address indexed oldCaller, address indexed newCaller);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -58,24 +54,21 @@ contract YieldOptimizer is Initializable, OwnableUpgradeable {
         asset = IERC20(_asset);
         
         // Set default values
-        maxActiveProtocols = 3;
-        minApyDifference = 50; // 0.5%
-        optimizationCooldown = 1 days;
+        minApyDifference = 0; // 0.5%
+        targetActiveProtocolCount = 1; 
         
         emit Initialized(msg.sender, _vault, _asset);
     }
-    
-    /**
-     * @notice Set the maximum number of active protocols
-     * @param _maxActiveProtocols The new maximum number of active protocols
-     */
-    function setMaxActiveProtocols(uint256 _maxActiveProtocols) external onlyOwner {
-        require(_maxActiveProtocols > 0, "Must be greater than zero");
-        
-        uint256 oldValue = maxActiveProtocols;
-        maxActiveProtocols = _maxActiveProtocols;
-        
-        emit MaxActiveProtocolsUpdated(oldValue, _maxActiveProtocols);
+
+    modifier onlyOwnerOrAuthorized() {
+        require(msg.sender == owner() || msg.sender == authorizedCaller, "Caller is not authorized");
+        _;
+    }
+
+    function setAuthorizedCaller(address newCaller) external onlyOwner {
+        require(newCaller != address(0), "Invalid address");
+        emit AuthorizedCallerUpdated(authorizedCaller, newCaller);
+        authorizedCaller = newCaller;
     }
     
     /**
@@ -88,73 +81,57 @@ contract YieldOptimizer is Initializable, OwnableUpgradeable {
         
         emit MinApyDifferenceUpdated(oldValue, _minApyDifference);
     }
-    
+
     /**
-     * @notice Set the cooldown period between optimizations for each protocol
-     * @param _optimizationCooldown The new cooldown period in seconds
+     * @notice Set the target number of active protocols to maintain
+     * @param _targetCount The new target number of active protocols
      */
-    function setOptimizationCooldown(uint256 _optimizationCooldown) external onlyOwner {
-        uint256 oldValue = optimizationCooldown;
-        optimizationCooldown = _optimizationCooldown;
+    function setTargetActiveProtocolCount(uint256 _targetCount) external onlyOwner {
+        require(_targetCount > 0, "Target count must be > 0");
+        uint256 oldValue = targetActiveProtocolCount;
+        targetActiveProtocolCount = _targetCount;
         
-        emit OptimizationCooldownUpdated(oldValue, _optimizationCooldown);
+        emit TargetActiveProtocolCountUpdated(oldValue, _targetCount);
     }
 
     /**
      * @notice Optimizes yield by selecting the highest APY protocols
      * @dev Called automatically via Chainlink Automation at the end of each epoch
      */
-    function optimizeYield() external {
+    function optimizeYield() external onlyOwnerOrAuthorized {
         // Get current active protocols
         uint256[] memory activeProtocolIds = registry.getActiveProtocolIds();
         uint256[] memory allProtocolIds = registry.getAllProtocolIds();
+        
+        // Use the configured target count instead of active protocols length
+        uint256 targetActiveCount = targetActiveProtocolCount;
+        require(targetActiveCount > 0, "No active protocols");
         
         // Track all protocol APYs (both active and inactive)
         ProtocolAPY[] memory protocolAPYs = new ProtocolAPY[](allProtocolIds.length);
         uint256 protocolCount = 0;
         
-        // Get APYs for all active protocols
-        for (uint256 i = 0; i < activeProtocolIds.length; i++) {
-            uint256 protocolId = activeProtocolIds[i];
-            address adapterAddress = address(registry.getAdapter(protocolId, address(asset)));
-            
-            if (adapterAddress != address(0)) {
-                uint256 apy = IProtocolAdapter(adapterAddress).getAPY(address(asset));
-                
-                protocolAPYs[protocolCount] = ProtocolAPY({
-                    protocolId: protocolId,
-                    apy: apy,
-                    isActive: true
-                });
-                protocolCount++;
-            }
-        }
-        
-        // Get APYs for all inactive protocols
+        // Get APYs for all protocols (both active and inactive)
         for (uint256 i = 0; i < allProtocolIds.length; i++) {
             uint256 protocolId = allProtocolIds[i];
-            
-            // Check if this protocol is already in our active list
-            bool alreadyActive = false;
-            for (uint256 j = 0; j < activeProtocolIds.length; j++) {
-                if (protocolId == activeProtocolIds[j]) {
-                    alreadyActive = true;
-                    break;
-                }
-            }
-            
-            // Skip if already processed as active
-            if (alreadyActive) continue;
-            
             address adapterAddress = address(registry.getAdapter(protocolId, address(asset)));
             
             if (adapterAddress != address(0)) {
                 uint256 apy = IProtocolAdapter(adapterAddress).getAPY(address(asset));
                 
+                // Check if this protocol is currently active
+                bool isActive = false;
+                for (uint256 j = 0; j < activeProtocolIds.length; j++) {
+                    if (protocolId == activeProtocolIds[j]) {
+                        isActive = true;
+                        break;
+                    }
+                }
+                
                 protocolAPYs[protocolCount] = ProtocolAPY({
                     protocolId: protocolId,
                     apy: apy,
-                    isActive: false
+                    isActive: isActive
                 });
                 protocolCount++;
             }
@@ -170,78 +147,61 @@ contract YieldOptimizer is Initializable, OwnableUpgradeable {
                 }
             }
         }
-        
-        // Find inactive protocols with better APY than active ones
+
+        // First, add any protocols from top N that aren't active yet
+        for (uint256 i = 0; i < targetActiveCount && i < protocolCount; i++) {
+            if (!protocolAPYs[i].isActive) {
+                // This protocol is in top N but not active, add it
+                vault.addActiveProtocol(protocolAPYs[i].protocolId);
+            }
+        }
+
+        // Then, remove protocols that are not in the top N by APY
         for (uint256 i = 0; i < protocolCount; i++) {
-            // If we have an inactive protocol with good APY
-            if (!protocolAPYs[i].isActive && i < maxActiveProtocols) {
-                uint256 newProtocolId = protocolAPYs[i].protocolId;
-                
-                // Skip if this protocol was recently optimized
-                if (block.timestamp - lastOptimized[newProtocolId] < optimizationCooldown) {
-                    continue;
-                }
-                
-                // Find the lowest APY active protocol to replace
-                uint256 lowestActiveIndex = type(uint256).max;
-                uint256 lowestActiveAPY = type(uint256).max;
-                uint256 lowestActiveProtocolId = 0;
-                
-                for (uint256 j = 0; j < protocolCount; j++) {
-                    if (protocolAPYs[j].isActive) {
-                        // If this active protocol has worse APY than our current lowest
-                        if (protocolAPYs[j].apy < lowestActiveAPY) {
-                            lowestActiveAPY = protocolAPYs[j].apy;
-                            lowestActiveIndex = j;
-                            lowestActiveProtocolId = protocolAPYs[j].protocolId;
-                        }
-                    }
-                }
-                
-                // Only replace if the new protocol has significantly higher APY
-                // and the lowest protocol hasn't been optimized recently
-                if (lowestActiveIndex != type(uint256).max &&
-                    protocolAPYs[i].apy > lowestActiveAPY + (lowestActiveAPY * minApyDifference / 10000) &&
-                    block.timestamp - lastOptimized[lowestActiveProtocolId] >= optimizationCooldown) {
-                    
-                    // Withdraw all funds from the low-performing protocol
-                    vault._withdrawAllFromProtocol(lowestActiveProtocolId);
-                    
-                    // Replace the protocol in the registry
-                    registry.replaceActiveProtocol(lowestActiveProtocolId, newProtocolId);
-                    
-                    // Calculate amount to supply to new protocol (equal distribution)
-                    uint256 amountToSupply = vault.totalAssets() / registry.getActiveProtocolIds().length;
-                    
-                    // Supply funds to the new high-performing protocol
-                    vault.supplyToProtocol(newProtocolId, amountToSupply);
-                    
-                    // Update optimization timestamps
-                    lastOptimized[lowestActiveProtocolId] = block.timestamp;
-                    lastOptimized[newProtocolId] = block.timestamp;
-                    
-                    emit OptimizedYield(lowestActiveProtocolId, newProtocolId, amountToSupply);
-                    
-                    // Only do one optimization per call to avoid excessive gas usage
-                    break;
-                } 
-                // If we have room for more active protocols, just add this one
-                else if (activeProtocolIds.length < maxActiveProtocols) {
-                    registry.addActiveProtocol(newProtocolId);
-                    
-                    uint256 amountToSupply = vault.totalAssets() / (activeProtocolIds.length + 1);
-                    vault.supplyToProtocol(newProtocolId, amountToSupply);
-                    
-                    // Update optimization timestamp
-                    lastOptimized[newProtocolId] = block.timestamp;
-                    
-                    emit OptimizedYield(0, newProtocolId, amountToSupply);
-                    
-                    // Only do one optimization per call to avoid excessive gas usage
+            if (protocolAPYs[i].isActive && i >= targetActiveCount) {
+                // This protocol is active but not in top N, remove it
+                vault.removeActiveProtocol(protocolAPYs[i].protocolId);
+            }
+        }
+
+        // Get final active protocols for event
+        uint256[] memory finalActiveProtocols = registry.getActiveProtocolIds();
+        uint256[] memory removedProtocols = new uint256[](activeProtocolIds.length);
+        uint256[] memory addedProtocols = new uint256[](finalActiveProtocols.length);
+        uint256 removedCount = 0;
+        uint256 addedCount = 0;
+
+        // Find removed protocols
+        for (uint256 i = 0; i < activeProtocolIds.length; i++) {
+            bool stillActive = false;
+            for (uint256 j = 0; j < finalActiveProtocols.length; j++) {
+                if (activeProtocolIds[i] == finalActiveProtocols[j]) {
+                    stillActive = true;
                     break;
                 }
             }
+            if (!stillActive) {
+                removedProtocols[removedCount] = activeProtocolIds[i];
+                removedCount++;
+            }
         }
+
+        // Find added protocols
+        for (uint256 i = 0; i < finalActiveProtocols.length; i++) {
+            bool wasActive = false;
+            for (uint256 j = 0; j < activeProtocolIds.length; j++) {
+                if (finalActiveProtocols[i] == activeProtocolIds[j]) {
+                    wasActive = true;
+                    break;
+                }
+            }
+            if (!wasActive) {
+                addedProtocols[addedCount] = finalActiveProtocols[i];
+                addedCount++;
+            }
+        }
+
+        emit OptimizedYield(removedProtocols, addedProtocols, vault.totalAssets() / targetActiveCount);
     }
     
     /**

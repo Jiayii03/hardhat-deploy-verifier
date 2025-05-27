@@ -16,14 +16,14 @@ async function main() {
   console.log("Deploying contracts with account:", deployer.address);
   console.log("Account balance:", (await ethers.provider.getBalance(deployer.address)).toString());
 
-  // ==================== BASE MAINNET ====================
-  const AAVE_POOL_ADDRESS = "0xA238Dd80C259a72e81d7e4664a9801593F98d1c5"; 
-  const COMPOUND_POOL_ADDRESS = "0xb125E6687d4313864e53df431d5425969c15Eb2F"; 
+  // ==================== SCROLL MAINNET ====================
+  const AAVE_POOL_ADDRESS = "0x11fCfe756c05AD438e312a7fd934381537D3cFfe";
+  const COMPOUND_POOL_ADDRESS = "0xB2f97c1Bd3bf02f5e74d13f02E3e26F93D77CE44";
   
   // Token addresses
-  const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"; 
-  const USDC_ATOKEN_ADDRESS = "0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB";
-  const USDC_CTOKEN_ADDRESS = "0xb125E6687d4313864e53df431d5425969c15Eb2F"; 
+  const USDC_ADDRESS = "0x06eFdBFf2a14a7c8E15944D1F4A48F9F95F663A4";
+  const USDC_ATOKEN_ADDRESS = "0x1D738a3436A8C49CefFbaB7fbF04B660fb528CbD";
+  const USDC_CTOKEN_ADDRESS = "0xB2f97c1Bd3bf02f5e74d13f02E3e26F93D77CE44";
 
   // Protocol IDs from Constants
   const AAVE_PROTOCOL_ID = 1;
@@ -103,7 +103,12 @@ async function main() {
     const CombinedVault = await ethers.getContractFactory("CombinedVault");
     const combinedVault = await upgrades.deployProxy(
       CombinedVault,
-      [USDC_ADDRESS, registry.address],
+      [
+        USDC_ADDRESS,
+        registry.address,
+        deployer.address, // treasury address
+        1000 // 10% performance fee (1000 basis points)
+      ],
       { kind: "transparent", initializer: "initialize" }
     );
     await combinedVault.deployed();
@@ -125,9 +130,16 @@ async function main() {
     // Step 9: Configure Registry and Vaults
     console.log("\nConfiguring Registry and Vaults...");
     
-    // Set authorized caller
-    console.log("Setting authorized caller...");
-    await registry.setAuthorizedCaller(combinedVault.address);
+    // Set authorized caller in registry
+    console.log("Setting authorized caller in registry...");
+    await registry.setAuthorizedCaller(combinedVault.address, { gasLimit: 500000 });
+    
+    // Set authorized caller in adapters
+    console.log("Setting authorized caller in Aave adapter...");
+    await aaveAdapter.setAuthorizedCaller(combinedVault.address, { gasLimit: 500000 });
+    
+    console.log("Setting authorized caller in Compound adapter...");
+    await compoundAdapter.setAuthorizedCaller(combinedVault.address, { gasLimit: 500000 });
     
     // Add Aave as active protocol
     console.log("Adding Aave as active protocol...");
