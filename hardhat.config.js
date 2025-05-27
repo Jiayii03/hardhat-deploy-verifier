@@ -7,9 +7,10 @@ const path = require("path");
 require("dotenv").config();
 
 // API URLs
-const API_URL_SCROLL = process.env.API_URL_SCROLL;
+const API_URL_SCROLL_SEPOLIA = process.env.API_URL_SCROLL_SEPOLIA;
 const API_URL_SEPOLIA = process.env.API_URL_SEPOLIA;
 const API_URL_BASE_SEPOLIA = process.env.API_URL_BASE_SEPOLIA;
+const API_URL_SCROLL = process.env.API_URL_SCROLL;
 const API_URL_BASE = process.env.API_URL_BASE;
 const API_URL_ANVIL = process.env.API_URL_ANVIL;
 
@@ -18,13 +19,14 @@ const PRIVATE_KEY = process.env.PRIVATE_KEY;
 const ANVIL_PRIVATE_KEY = process.env.ANVIL_PRIVATE_KEY;
 
 // Web3 providers
-const web3Scroll = createAlchemyWeb3(API_URL_SCROLL);
+const web3ScrollSepolia = createAlchemyWeb3(API_URL_SCROLL_SEPOLIA);
 const web3Sepolia = createAlchemyWeb3(API_URL_SEPOLIA);
 const web3BaseSepolia = createAlchemyWeb3(API_URL_BASE_SEPOLIA);
 const web3Base = createAlchemyWeb3(API_URL_BASE);
+const web3Scroll = createAlchemyWeb3(API_URL_SCROLL);
 
-const networkIDArr = ["Scroll Sepolia:", "Sepolia:", "Base Sepolia:", "Base:"];
-const providerArr = [web3Scroll, web3Sepolia, web3BaseSepolia, web3Base];
+const networkIDArr = ["Scroll Sepolia:", "Sepolia:", "Base Sepolia:", "Base:", "Scroll:"];
+const providerArr = [web3ScrollSepolia, web3Sepolia, web3BaseSepolia, web3Base, web3Scroll];
 
 task("account", "Returns nonce and balance for specified address on all networks")
   .addParam("address", "The address to query")
@@ -56,7 +58,7 @@ module.exports = {
   networks: {
     hardhat: {},
     scrollSepolia: {
-      url: API_URL_SCROLL,
+      url: API_URL_SCROLL_SEPOLIA,
       accounts: [`0x${PRIVATE_KEY}`],
       chainId: 534351,
       ensAddress: null
@@ -76,12 +78,17 @@ module.exports = {
       accounts: [`0x${PRIVATE_KEY}`],
       chainId: 8453
     },
-    anvilForkedBase: {
+    scroll: {
+      url: API_URL_SCROLL,
+      accounts: [`0x${PRIVATE_KEY}`],
+      chainId: 534352
+    },
+    anvilForkedScroll: {
       url: API_URL_ANVIL,
       accounts: [`0x${ANVIL_PRIVATE_KEY}`],
-      chainId: 8453,
+      chainId: 534352,
       forking: {
-        url: API_URL_BASE,
+        url: API_URL_SCROLL,
       }
     }
   },
@@ -90,7 +97,8 @@ module.exports = {
       scrollSepolia: process.env.ETHERSCAN_API_KEY_SCROLL_SEPOLIA,
       sepolia: process.env.ETHERSCAN_API_KEY_SEPOLIA,
       baseSepolia: process.env.ETHERSCAN_API_KEY_BASE_SEPOLIA,
-      base: process.env.ETHERSCAN_API_KEY_BASE
+      base: process.env.ETHERSCAN_API_KEY_BASE,
+      scroll: process.env.ETHERSCAN_API_KEY_SCROLL
     },
     customChains: [
       {
@@ -119,8 +127,8 @@ module.exports = {
         }
       },
       {
-        network: "anvilForkedBase",
-        chainId: 8453,
+        network: "anvilForkedScroll",
+        chainId: 534352,
         urls: {
           apiURL: "http://127.0.0.1:8545/api",
           browserURL: "http://127.0.0.1:8545"
@@ -132,6 +140,14 @@ module.exports = {
         urls: {
           apiURL: "https://api.basescan.org/api",
           browserURL: "https://basescan.org"
+        }
+      },
+      {
+        network: "scroll",
+        chainId: 534352,
+        urls: {
+          apiURL: "https://api.scrollscan.com/api",
+          browserURL: "https://scrollscan.com"
         }
       }
     ]

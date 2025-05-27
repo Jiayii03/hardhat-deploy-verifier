@@ -7,11 +7,11 @@ const axios = require("axios"); // You'll need to install axios: npm install axi
 
 async function main() {
   // Your proxy addresses
-  const REGISTRY_PROXY = "0x8ceE3EBFe716fca99197B7AF1B3e8809Dd7f1db5";
-  const AAVE_ADAPTER_PROXY = "0xad0b5Af5BD6aB561926785b20632b9c0b432c972";
-  const COMPOUND_ADAPTER_PROXY = "0xF7dF5097948545CA6B6a11BF9Ab7ea03e4c38817";
-  const VIRTUAL_VAULT_PROXY = "0xE16Bbaf8206a2DE4409FeaA47e29c6B28Ff13c47";
-  const COMBINED_VAULT_PROXY = "0x876c4462949d3a7861D469F404511AC0F2ae20C6";
+  const REGISTRY_PROXY = "0x7f5b50bb94Ca80027FDe2fA00607B9d1CD51384e";
+  const AAVE_ADAPTER_PROXY = "0x158Fc38C128D70bef153A10256FA878C0b294792";
+  const COMPOUND_ADAPTER_PROXY = "0x691303a12A4fBfFEBdFB282336181E9A45730bfd";
+  const VIRTUAL_VAULT_PROXY = "0x6a8897284DF2F50Fe797A3D6665995D50BDeE69A";
+  const COMBINED_VAULT_PROXY = "0x6C50E082E08365450F2231f88e1625e8EeB23dFF";
   
   // Get API key from hardhat config
   const apiKey = hre.config.etherscan.apiKey.scroll;
@@ -235,43 +235,43 @@ async function main() {
   }
   
   // Flatten and verify contracts
-  // console.log("\n=== Flattening and Verifying Contracts ===");
+  console.log("\n=== Flattening and Verifying Contracts ===");
   
-  // // ProtocolRegistry
-  // const registryFlatPath = await flattenContract(
-  //   "contracts/core/ProtocolRegistry.sol", 
-  //   "ProtocolRegistry_flat.sol"
-  // );
-  // if (registryFlatPath) {
-  //   await verifyContractWithAPI("ProtocolRegistry", registryImpl, registryFlatPath);
-  // }
+  // ProtocolRegistry
+  const registryFlatPath = await flattenContract(
+    "contracts/core/ProtocolRegistry.sol", 
+    "ProtocolRegistry_flat.sol"
+  );
+  if (registryFlatPath) {
+    await verifyContractWithAPI("ProtocolRegistry", registryImpl, registryFlatPath);
+  }
   
-  // // AaveAdapter
-  // const aaveAdapterFlatPath = await flattenContract(
-  //   "contracts/adapters/AaveAdapter.sol", 
-  //   "AaveAdapter_flat.sol"
-  // );
-  // if (aaveAdapterFlatPath) {
-  //   await verifyContractWithAPI("AaveAdapter", aaveAdapterImpl, aaveAdapterFlatPath);
-  // }
+  // AaveAdapter
+  const aaveAdapterFlatPath = await flattenContract(
+    "contracts/adapters/AaveAdapter.sol", 
+    "AaveAdapter_flat.sol"
+  );
+  if (aaveAdapterFlatPath) {
+    await verifyContractWithAPI("AaveAdapter", aaveAdapterImpl, aaveAdapterFlatPath);
+  }
   
-  // // CompoundAdapter
-  // const compoundAdapterFlatPath = await flattenContract(
-  //   "contracts/adapters/CompoundAdapter.sol", 
-  //   "CompoundAdapter_flat.sol"
-  // );
-  // if (compoundAdapterFlatPath) {
-  //   await verifyContractWithAPI("CompoundAdapter", compoundAdapterImpl, compoundAdapterFlatPath);
-  // }
+  // CompoundAdapter
+  const compoundAdapterFlatPath = await flattenContract(
+    "contracts/adapters/CompoundAdapter.sol", 
+    "CompoundAdapter_flat.sol"
+  );
+  if (compoundAdapterFlatPath) {
+    await verifyContractWithAPI("CompoundAdapter", compoundAdapterImpl, compoundAdapterFlatPath);
+  }
 
   // VirtualVault
-  // const virtualVaultFlatPath = await flattenContract(
-  //   "contracts/core/VirtualVault.sol", 
-  //   "VirtualVault_flat.sol"
-  // );
-  // if (virtualVaultFlatPath) {
-  //   await verifyContractWithAPI("VirtualVault", virtualVaultImpl, virtualVaultFlatPath);
-  // }
+  const virtualVaultFlatPath = await flattenContract(
+    "contracts/core/VirtualVault.sol", 
+    "VirtualVault_flat.sol"
+  );
+  if (virtualVaultFlatPath) {
+    await verifyContractWithAPI("VirtualVault", virtualVaultImpl, virtualVaultFlatPath);
+  }
 
   // CombinedVault
   const combinedVaultFlatPath = await flattenContract(
@@ -284,11 +284,16 @@ async function main() {
   
   console.log("\n=== Verification Process Complete ===");
   console.log("Check contract verification status on Scrollscan:");
-  // console.log(`https://scrollscan.com/address/${registryImpl}#code`);
-  // console.log(`https://scrollscan.com/address/${aaveAdapterImpl}#code`);
-  // console.log(`https://scrollscan.com/address/${compoundAdapterImpl}#code`);
-  // console.log(`https://scrollscan.com/address/${virtualVaultImpl}#code`);
-  console.log(`https://scrollscan.com/address/${combinedVaultImpl}#code`);
+  console.log(`ProtocolRegistry Proxy: https://scrollscan.com/address/${REGISTRY_PROXY}#code`);
+  console.log(`ProtocolRegistry Implementation: https://scrollscan.com/address/${registryImpl}#code`);
+  console.log(`AaveAdapter Proxy: https://scrollscan.com/address/${AAVE_ADAPTER_PROXY}#code`);
+  console.log(`AaveAdapter Implementation: https://scrollscan.com/address/${aaveAdapterImpl}#code`);
+  console.log(`CompoundAdapter Proxy: https://scrollscan.com/address/${COMPOUND_ADAPTER_PROXY}#code`);
+  console.log(`CompoundAdapter Implementation: https://scrollscan.com/address/${compoundAdapterImpl}#code`);
+  console.log(`VirtualVault Proxy: https://scrollscan.com/address/${VIRTUAL_VAULT_PROXY}#code`);
+  console.log(`VirtualVault Implementation: https://scrollscan.com/address/${virtualVaultImpl}#code`);
+  console.log(`CombinedVault Proxy: https://scrollscan.com/address/${COMBINED_VAULT_PROXY}#code`);
+  console.log(`CombinedVault Implementation: https://scrollscan.com/address/${combinedVaultImpl}#code`);
 }
 
 main()
