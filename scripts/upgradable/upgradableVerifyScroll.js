@@ -14,9 +14,9 @@ async function main() {
   const COMBINED_VAULT_PROXY = "0x876c4462949d3a7861D469F404511AC0F2ae20C6";
   
   // Get API key from hardhat config
-  const apiKey = hre.config.etherscan.apiKey.base;
+  const apiKey = hre.config.etherscan.apiKey.scroll;
   if (!apiKey) {
-    throw new Error("No API key found for Base network!");
+    throw new Error("No API key found for Scroll network!");
   }
   
   // Create directory for flattened contracts
@@ -79,13 +79,13 @@ async function main() {
     }
   }
   
-  // Function to verify a contract using Basescan API directly
+  // Function to verify a contract using Scrollscan API directly
   async function verifyContractWithAPI(contractName, contractAddress, flattenedPath) {
     console.log(`\nVerifying ${contractName} at ${contractAddress}...`);
     
     // Check if contract is already verified
     try {
-      const checkResponse = await axios.get(`https://api.basescan.org/api`, {
+      const checkResponse = await axios.get(`https://api.scrollscan.com/api`, {
         params: {
           module: 'contract',
           action: 'getsourcecode',
@@ -115,7 +115,7 @@ async function main() {
       const optimized = true;
       const runs = 200;
       
-      console.log(`Submitting verification request to Basescan API...`);
+      console.log(`Submitting verification request to Scrollscan API...`);
       console.log(`Using compiler: ${compiler}`);
       console.log(`Optimization: ${optimized ? 'enabled' : 'disabled'}, runs: ${runs}`);
       
@@ -136,7 +136,7 @@ async function main() {
       
       // Submit verification request
       const verifyResponse = await axios.post(
-        'https://api.basescan.org/api',
+        'https://api.scrollscan.com/api',
         new URLSearchParams(verifyData),
         {
           headers: {
@@ -153,7 +153,7 @@ async function main() {
         console.log(`Waiting 15 seconds for verification to complete...`);
         await new Promise(resolve => setTimeout(resolve, 15000));
         
-        const statusResponse = await axios.get(`https://api.basescan.org/api`, {
+        const statusResponse = await axios.get(`https://api.scrollscan.com/api`, {
           params: {
             module: 'contract',
             action: 'checkverifystatus',
@@ -185,7 +185,7 @@ async function main() {
               };
               
               const retryResponse = await axios.post(
-                'https://api.basescan.org/api',
+                'https://api.scrollscan.com/api',
                 new URLSearchParams(retryData),
                 {
                   headers: {
@@ -202,7 +202,7 @@ async function main() {
                 console.log(`Waiting 15 seconds for verification to complete...`);
                 await new Promise(resolve => setTimeout(resolve, 15000));
                 
-                const retryStatusResponse = await axios.get(`https://api.basescan.org/api`, {
+                const retryStatusResponse = await axios.get(`https://api.scrollscan.com/api`, {
                   params: {
                     module: 'contract',
                     action: 'checkverifystatus',
@@ -283,12 +283,12 @@ async function main() {
   }
   
   console.log("\n=== Verification Process Complete ===");
-  console.log("Check contract verification status on Basescan:");
-  // console.log(`https://basescan.org/address/${registryImpl}#code`);
-  // console.log(`https://basescan.org/address/${aaveAdapterImpl}#code`);
-  // console.log(`https://basescan.org/address/${compoundAdapterImpl}#code`);
-  // console.log(`https://basescan.org/address/${virtualVaultImpl}#code`);
-  console.log(`https://basescan.org/address/${combinedVaultImpl}#code`);
+  console.log("Check contract verification status on Scrollscan:");
+  // console.log(`https://scrollscan.com/address/${registryImpl}#code`);
+  // console.log(`https://scrollscan.com/address/${aaveAdapterImpl}#code`);
+  // console.log(`https://scrollscan.com/address/${compoundAdapterImpl}#code`);
+  // console.log(`https://scrollscan.com/address/${virtualVaultImpl}#code`);
+  console.log(`https://scrollscan.com/address/${combinedVaultImpl}#code`);
 }
 
 main()
