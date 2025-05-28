@@ -251,7 +251,7 @@ contract AaveAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable {
     function setMinRewardAmount(
         address asset,
         uint256 amount
-    ) external override onlyOwnerOrAuthorized {
+    ) external override(IProtocolAdapter) onlyOwnerOrAuthorized {
         require(supportedAssets[asset], "Asset not supported");
         minRewardAmount[asset] = amount;
     }
@@ -266,7 +266,7 @@ contract AaveAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable {
     function supply(
         address asset,
         uint256 amount
-    ) external override onlyOwnerOrAuthorized returns (uint256) {
+    ) external override(IProtocolAdapter) onlyOwnerOrAuthorized returns (uint256) {
         require(supportedAssets[asset], "Asset not supported");
         require(amount > 0, "Amount must be greater than 0");
 
@@ -294,7 +294,7 @@ contract AaveAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable {
     function withdraw(
         address asset,
         uint256 amount
-    ) external override onlyOwnerOrAuthorized returns (uint256) {
+    ) external override(IProtocolAdapter) onlyOwnerOrAuthorized returns (uint256) {
         require(supportedAssets[asset], "Asset not supported");
         require(amount > 0, "Amount must be greater than 0");
 
@@ -343,7 +343,7 @@ contract AaveAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable {
         address asset, 
         uint256 amount, 
         address user
-    ) external override onlyOwnerOrAuthorized returns (uint256) {
+    ) external override(IProtocolAdapter) onlyOwnerOrAuthorized returns (uint256) {
         require(supportedAssets[asset], "Asset not supported"); 
         require(amount > 0, "Amount must be greater than 0");
         require(user != address(0), "Invalid user address");
@@ -415,7 +415,7 @@ contract AaveAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable {
      */
     function harvest(
         address asset
-    ) external override onlyOwnerOrAuthorized returns (uint256 totalAssets) {
+    ) external override(IProtocolAdapter) onlyOwnerOrAuthorized returns (uint256 totalAssets) {
         require(supportedAssets[asset], "Asset not supported");
 
         address aToken = aTokens[asset];
@@ -445,7 +445,7 @@ contract AaveAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable {
      * @param asset The address of the asset
      * @return The total principal amount
      */
-    function getTotalPrincipal(address asset) external view override returns (uint256) {
+    function getTotalPrincipal(address asset) external view override(IProtocolAdapter) returns (uint256) {
         return totalPrincipal[asset];
     }
 
@@ -474,7 +474,7 @@ contract AaveAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable {
      * @param asset The underlying asset address
      * @return APY in basis points (1% = 100)
      */
-    function getAPY(address asset) external view override returns (uint256) {
+    function getAPY(address asset) external view override(IProtocolAdapter) returns (uint256) {
         require(supportedAssets[asset], "Asset not supported");
 
         DataTypes.ReserveDataLegacy memory reserveData = IPool(address(pool))
@@ -494,7 +494,7 @@ contract AaveAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable {
      */
     function getBalance(
         address asset
-    ) external view override returns (uint256) {
+    ) external view override(IProtocolAdapter) returns (uint256) {
         require(supportedAssets[asset], "Asset not supported");
         return totalPrincipal[asset];
     }
@@ -506,7 +506,7 @@ contract AaveAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable {
      */
     function isAssetSupported(
         address asset
-    ) external view override returns (bool) {
+    ) external view override(IProtocolAdapter) returns (bool) {
         return supportedAssets[asset];
     }
 
@@ -514,7 +514,7 @@ contract AaveAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable {
      * @dev Get the name of the protocol
      * @return The protocol name
      */
-    function getProtocolName() external pure override returns (string memory) {
+    function getProtocolName() external pure override(IProtocolAdapter) returns (string memory) {
         return PROTOCOL_NAME;
     }
 
@@ -523,7 +523,7 @@ contract AaveAdapter is IProtocolAdapter, Initializable, OwnableUpgradeable {
      * @param asset The address of the asset
      * @return The aToken address
      */
-    function getReceiptToken(address asset) external view override returns (address) {
+    function getReceiptToken(address asset) external view override(IProtocolAdapter) returns (address) {
         require(supportedAssets[asset], "Asset not supported");
         return aTokens[asset];
     }

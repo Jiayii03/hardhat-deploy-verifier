@@ -3,17 +3,17 @@ const { ethers, upgrades } = require("hardhat");
 
 async function main() {
   // Get the proxy address from your deployment
-  const COMPOUND_ADAPTER_PROXY_ADDRESS = "0xF7dF5097948545CA6B6a11BF9Ab7ea03e4c38817";
+  const COMBINED_VAULT_PROXY_ADDRESS = "0x6C50E082E08365450F2231f88e1625e8EeB23dFF";
   
-  console.log("Upgrading Compound Adapter...");
+  console.log("Upgrading Combined Vault...");
 
   // Get the contract factory for the V2 implementation
-  const UpgradedCompoundAdapter = await ethers.getContractFactory("CompoundAdapter");
+  const UpgradedCombinedVault = await ethers.getContractFactory("CombinedVault");
   
   // Upgrade the proxy to point to the new implementation
-  await upgrades.upgradeProxy(COMPOUND_ADAPTER_PROXY_ADDRESS, UpgradedCompoundAdapter);
+  await upgrades.upgradeProxy(COMBINED_VAULT_PROXY_ADDRESS, UpgradedCombinedVault);
   
-  console.log("CompoundAdapter upgraded successfully");
+  console.log("CombinedVault upgraded successfully");
 }
 
 main()

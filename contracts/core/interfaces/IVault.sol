@@ -43,13 +43,6 @@ interface IVault {
     function balanceOf(address account) external view returns (uint256);
     
     /**
-     * @dev Supply funds to a specific protocol
-     * @param protocolId ID of the protocol to supply to
-     * @param amount Amount to supply
-     */
-    function supplyToProtocol(uint256 protocolId, uint256 amount) external;
-    
-    /**
      * @dev Add a protocol to active protocols
      * @param protocolId ID of the protocol to add
      */
@@ -123,13 +116,13 @@ interface IVault {
      */
     function previewRedeem(uint256 shares) external view returns (uint256);
 
-    /**
-     * @dev Mint shares to receiver by depositing assets
-     * @param shares Amount of shares to mint
-     * @param receiver Address of the receiver
-     * @return assets Amount of assets deposited
-     */
-    function mint(uint256 shares, address receiver) external returns (uint256);
+    // /**
+    //  * @dev Mint shares to receiver by depositing assets
+    //  * @param shares Amount of shares to mint
+    //  * @param receiver Address of the receiver
+    //  * @return assets Amount of assets deposited
+    //  */
+    // function mint(uint256 shares, address receiver) external returns (uint256);
 
     /**
      * @dev Burn shares from owner and send assets to receiver

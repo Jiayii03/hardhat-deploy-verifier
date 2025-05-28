@@ -123,6 +123,15 @@ contract CombinedVault is
     }
 
     /**
+     * @notice Ensures only virtual vault can deposit directly
+     * @dev Used to restrict direct deposits to the vault
+     */
+    modifier onlyVirtualVault() {
+        require(msg.sender == address(virtualVault), "Only virtual vault can deposit");
+        _;
+    }
+
+    /**
      * @notice Initializes the vault with asset and registry
      * @dev Called during proxy deployment
      * @param assetAddress Address of the underlying asset
@@ -198,7 +207,7 @@ contract CombinedVault is
      * @dev Verifies protocol registration and adapter availability
      * @param protocolId ID of the protocol to add
      */
-    function addActiveProtocol(uint256 protocolId) external override onlyOwnerOrAuthorized {
+    function addActiveProtocol(uint256 protocolId) external override(IVault) onlyOwnerOrAuthorized {
         require(
             bytes(registry.getProtocolName(protocolId)).length > 0,
             "Protocol not registered"
@@ -217,7 +226,7 @@ contract CombinedVault is
      * @dev Withdraws all funds before removal
      * @param protocolId ID of the protocol to remove
      */
-    function removeActiveProtocol(uint256 protocolId) external override onlyOwnerOrAuthorized {        
+    function removeActiveProtocol(uint256 protocolId) external override(IVault) onlyOwnerOrAuthorized {        
         uint256[] memory activeProtocols = registry.getActiveProtocolIds();
         require(activeProtocols.length > 1, "Cannot remove last protocol");
 
@@ -240,7 +249,7 @@ contract CombinedVault is
     function replaceActiveProtocol(
         uint256 oldProtocolId,
         uint256 newProtocolId
-    ) external override onlyOwner {
+    ) external override(IVault) onlyOwner {
         require(
             bytes(registry.getProtocolName(newProtocolId)).length > 0,
             "New protocol not registered"
@@ -290,7 +299,7 @@ contract CombinedVault is
     function deposit(
         address user,
         uint256 amount
-    ) external override nonReentrant {
+    ) external override(IVault) onlyVirtualVault nonReentrant {
         require(user != address(0), "Invalid user");
         require(amount > 0, "Deposit must be > 0");
         
@@ -409,7 +418,7 @@ contract CombinedVault is
      */
     function accrueAndFlush()
         external
-        override
+        override(IVault)
         onlyOwnerOrAuthorized
         returns (uint256 harvestedAmount)
     {
@@ -466,29 +475,6 @@ contract CombinedVault is
             redemptionRate
         );
         return totalAssets;
-    }
-
-    /**
-     * @notice Supplies funds to a specific protocol
-     * @dev Handles approval and supply through adapter
-     * @param protocolId ID of the protocol to supply to
-     * @param amount Amount to supply
-     */
-    function supplyToProtocol(
-        uint256 protocolId,
-        uint256 amount
-    ) external override onlyOwnerOrAuthorized {
-        require(amount > 0, "Amount must be greater than zero");
-
-        IProtocolAdapter adapter = registry.getAdapter(
-            protocolId,
-            address(_asset)
-        );
-        require(address(adapter) != address(0), "Invalid protocol adapter");
-
-        SafeERC20.forceApprove(_asset, address(adapter), amount);
-        uint256 supplied = adapter.supply(address(_asset), amount);
-        require(supplied > 0, "Supply failed");
     }
 
     /**
@@ -767,20 +753,20 @@ contract CombinedVault is
         return convertToAssets(shares);
     }
 
-    /**
-     * @dev Mints shares to receiver by depositing assets
-     * @param shares Amount of shares to mint
-     * @param receiver Address of the receiver
-     * @return assets Amount of assets deposited
-     */
-    function mint(
-        uint256 shares,
-        address receiver
-    ) public override(ERC4626Upgradeable, IVault) returns (uint256) {
-        uint256 assets = previewMint(shares);
-        deposit(assets, receiver);
-        return assets;
-    }
+    // /**
+    //  * @dev Mints shares to receiver by depositing assets
+    //  * @param shares Amount of shares to mint
+    //  * @param receiver Address of the receiver
+    //  * @return assets Amount of assets deposited
+    //  */
+    // function mint(
+    //     uint256 shares,
+    //     address receiver
+    // ) public override(ERC4626Upgradeable, IVault) returns (uint256) {
+    //     uint256 assets = previewMint(shares);
+    //     deposit(assets, receiver);
+    //     return assets;
+    // }
 
     /**
      * @dev Burns shares from owner and sends assets to receiver
