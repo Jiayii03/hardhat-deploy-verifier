@@ -4307,7 +4307,7 @@ contract VirtualVault is
     event DepositFailed(address indexed user, uint256 amount, string reason);
     event DepositProcessed(address indexed user, uint256 amount);
     event VirtualDeposit(
-        address indexed user,
+        address indexed user, 
         uint256 amount,
         uint256 virtualShares,
         uint256 virtualBalance,
@@ -4327,6 +4327,33 @@ contract VirtualVault is
         uint256 totalUserAssets,
         uint256 timestamp
     );
+
+    /**
+     * @notice Accepts any assets (ETH or ERC20) that are sent to the vault
+     * @dev This function allows the vault to receive:
+     *      - ETH via direct transfers or .call{value:...}("")
+     *      - ERC20 tokens via transfer/transferFrom
+     * All received assets can be swept to owner using sweepAccidentalTokens:
+     * - For ETH: sweepAccidentalTokens(address(0))
+     * - For ERC20: sweepAccidentalTokens(tokenAddress)
+     * - For main asset: only excess above managed assets will be swept
+     * This prevents assets from getting stuck in the vault
+     */
+    receive() external payable {
+        // Optional: emit an event for received ETH
+        emit ReceivedAsset(msg.sender, msg.value);
+    }
+
+    /**
+     * @notice Fallback function to handle any calls to the contract
+     * @dev This is required to properly handle payable conversions
+     */
+    fallback() external payable {
+        // Optional: emit an event for received ETH
+        emit ReceivedAsset(msg.sender, msg.value);
+    }
+
+    event ReceivedAsset(address indexed sender, uint256 amount);
 
     /**
      * @notice Ensures only owner or authorized caller can execute function
@@ -4684,6 +4711,36 @@ contract VirtualVault is
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
     uint256[50] private __gap;
+
+    function sweepAccidentalTokens(address token) external onlyOwner {
+        if (token == address(0)) {
+            // Handle ETH
+            uint256 balance = address(this).balance;
+            require(balance > 0, "No ETH to sweep");
+            (bool success, ) = owner().call{value: balance}("");
+            require(success, "ETH transfer failed");
+        } else {
+            // Handle ERC20 tokens
+            uint256 vaultBalance = IERC20(token).balanceOf(address(this));
+            require(vaultBalance > 0, "No tokens to sweep");
+
+            // Special handling for vault's main asset (USDC)
+            if (token == address(asset())) {
+                // Get total managed assets (in queued deposits)
+                uint256 managedAssets = 0;
+                for (uint i = 0; i < queuedUsers.length; i++) {
+                    managedAssets += queuedDeposits[queuedUsers[i]].amount;
+                }
+                // Only allow sweeping if there's excess balance
+                require(vaultBalance > managedAssets, "No excess assets to sweep");
+                uint256 excessAmount = vaultBalance - managedAssets;
+                SafeERC20.safeTransfer(IERC20(token), owner(), excessAmount);
+            } else {
+                // For other tokens, sweep entire balance
+                SafeERC20.safeTransfer(IERC20(token), owner(), vaultBalance);
+            }
+        }
+    }
 }
 
 
@@ -4767,8 +4824,8 @@ contract CombinedVault is
     event Harvested(
         uint256 timestamp,
         uint256 totalAssets,
-        uint256 oldRate,
-        uint256 newRate
+        uint256 previousRedemptionRate,
+        uint256 redemptionRate
     );
     event ProtocolAdded(uint256 indexed protocolId);
     event ProtocolRemoved(uint256 indexed protocolId);
@@ -4883,7 +4940,7 @@ contract CombinedVault is
      */
     function setVirtualVault(address _vault) external onlyOwner {
         require(_vault != address(0), "Invalid address");
-        virtualVault = VirtualVault(_vault);
+        virtualVault = VirtualVault(payable(_vault));
         emit VirtualVaultSet(_vault);
     }
 
@@ -4939,7 +4996,7 @@ contract CombinedVault is
         if (remainingProtocols.length > 0) {
             _distributeAssets();
         }
-    }
+    }   
 
     /**
      * @notice Replaces one protocol with another

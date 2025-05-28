@@ -90,8 +90,8 @@ contract CombinedVault is
     event Harvested(
         uint256 timestamp,
         uint256 totalAssets,
-        uint256 oldRate,
-        uint256 newRate
+        uint256 previousRedemptionRate,
+        uint256 redemptionRate
     );
     event ProtocolAdded(uint256 indexed protocolId);
     event ProtocolRemoved(uint256 indexed protocolId);

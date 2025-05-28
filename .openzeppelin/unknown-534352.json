@@ -29,6 +29,71 @@
       "address": "0x6a8897284DF2F50Fe797A3D6665995D50BDeE69A",
       "txHash": "0x3d6fc2bd450b52aa18bb1f3ef18f8ad5525bae81091d3da34e9004573359b5be",
       "kind": "transparent"
+    },
+    {
+      "address": "0xB2a2938ca2589ac0Ce7c437604eB41a989Fd9ae5",
+      "txHash": "0xe2d63d7d696081f6e78f5c1eac3188405c252788fd36f6724881851b0a292727",
+      "kind": "transparent"
+    },
+    {
+      "address": "0x522F64d4E44D8510980780cEe616D2f0B314BF0D",
+      "txHash": "0x68e45c9968bddaebb124bacba9de890b22aca1dd99a69e6c13d19b8c01df1dc1",
+      "kind": "transparent"
+    },
+    {
+      "address": "0xD7395bbf70328dD1B0cDBE4eAe0F41FF59f9e7dA",
+      "txHash": "0x496ad3882e9cde7cd3a3fbb4fa19aef2679c04c626a808c2528bdd8d987ea77a",
+      "kind": "transparent"
+    },
+    {
+      "address": "0xA86E05528000991ecd10B82919f4EbB79Ff58524",
+      "txHash": "0xcf0e47abca472ef01cc6b000436d58990a8777c8f62748470290cee302bc5cfa",
+      "kind": "transparent"
+    },
+    {
+      "address": "0x6b57A124b1D1865d9Ff523Cd4A59c62263a78a50",
+      "txHash": "0x1a01cbd2e24767d2f07bd64b11dd4bd99c52daa6f28127f1ea8f8b39ab2057d3",
+      "kind": "transparent"
+    },
+    {
+      "address": "0xFe9F8CB5CDd914BdDF388F0Dc521993229F92Bff",
+      "txHash": "0x22b633feabb0ad2537703bac18b305a43944ff002c0d20516f9b6072ccdc2c7f",
+      "kind": "transparent"
+    },
+    {
+      "address": "0x1AE569E1fe500D7E6C82CA550DD64436dc52C731",
+      "txHash": "0x2c2f8221d9b4ec670b4d23b49f27d834ab5726772ffcf58b940b81010da4d733",
+      "kind": "transparent"
+    },
+    {
+      "address": "0x7f4939605F483497e151067f0a2C91221883A930",
+      "txHash": "0x9e57e636b3cd047dc17c1103b2c6ff9921e231c9a1bd5f04a69428dee5b9b4a6",
+      "kind": "transparent"
+    },
+    {
+      "address": "0x622fE7Fe01e1dE9Cb1c613063e67e3Fc885d94Cd",
+      "txHash": "0xf3cdcdfcb60826a1063e609cc7945db09856b2462895c96d0ee5dfcba806e9b6",
+      "kind": "transparent"
+    },
+    {
+      "address": "0xb5F471F2211d4eaD61F5bD89d8eE711ab08e86A5",
+      "txHash": "0xa43aedd0eb981793144e660979709a9c5b72cbe68fc8890cc7c4b38b0f65bcea",
+      "kind": "transparent"
+    },
+    {
+      "address": "0xa2c28379AF708AeF08298694130523a56097bD15",
+      "txHash": "0x8fc0280279b37d2b27f7002d703452a6e18ecc87dd58d98e860b8122d27fb770",
+      "kind": "transparent"
+    },
+    {
+      "address": "0x11C8D7894A582199CBf400dabFe0Be2fC3BB3176",
+      "txHash": "0xd1342b4fc52c9cb693229fe6274a357f70882b6497e5f85ef529667ab998f550",
+      "kind": "transparent"
+    },
+    {
+      "address": "0x921bE808782590115c675CDA86B3aB61b55B502c",
+      "txHash": "0x628c844060515bb702be190b60f285881183d8bf9d4ab2fed241ec3409f63d74",
+      "kind": "transparent"
     }
   ],
   "impls": {
@@ -1896,6 +1961,251 @@
             "numberOfBytes": "96"
           },
           "t_struct(QueuedDeposit)9325_storage": {
+            "label": "struct VirtualVault.QueuedDeposit",
+            "members": [
+              {
+                "label": "amount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "exists",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_contract(IERC20)2479": {
+            "label": "contract IERC20"
+          },
+          "t_uint8": {
+            "label": "uint8"
+          },
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)"
+          },
+          "t_mapping(t_address,t_mapping(t_address,t_uint256))": {
+            "label": "mapping(address => mapping(address => uint256))"
+          },
+          "t_string_storage": {
+            "label": "string"
+          },
+          "t_uint64": {
+            "label": "uint64"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:24"
+            }
+          ],
+          "erc7201:openzeppelin.storage.ReentrancyGuard": [
+            {
+              "contract": "ReentrancyGuardUpgradeable",
+              "label": "_status",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\utils\\ReentrancyGuardUpgradeable.sol:43"
+            }
+          ],
+          "erc7201:openzeppelin.storage.ERC4626": [
+            {
+              "contract": "ERC4626Upgradeable",
+              "label": "_asset",
+              "type": "t_contract(IERC20)2479",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\extensions\\ERC4626Upgradeable.sol:56"
+            },
+            {
+              "contract": "ERC4626Upgradeable",
+              "label": "_underlyingDecimals",
+              "type": "t_uint8",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\extensions\\ERC4626Upgradeable.sol:57"
+            }
+          ],
+          "erc7201:openzeppelin.storage.ERC20": [
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_balances",
+              "type": "t_mapping(t_address,t_uint256)",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:33"
+            },
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_allowances",
+              "type": "t_mapping(t_address,t_mapping(t_address,t_uint256))",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:35"
+            },
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_totalSupply",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:37"
+            },
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_name",
+              "type": "t_string_storage",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:39"
+            },
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_symbol",
+              "type": "t_string_storage",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:40"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:69"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:73"
+            }
+          ]
+        }
+      }
+    },
+    "25ae7d1f5200914bc33b96e0a23f2ff0e36fc32a52de57c03b2937420a20ee42": {
+      "address": "0x18818CD024c153F24724bCC324E7C7Cf28A75fE7",
+      "txHash": "0x12b1a95d7621feddf68fcf7630c7a51a78cf6a32ffc0c8f5f73bddbba724b243",
+      "layout": {
+        "solcVersion": "0.8.20",
+        "storage": [
+          {
+            "label": "combinedVault",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(ICombinedVault)10130",
+            "contract": "VirtualVault",
+            "src": "contracts\\core\\VirtualVault.sol:39"
+          },
+          {
+            "label": "queuedDeposits",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_mapping(t_address,t_struct(QueuedDeposit)10150_storage)",
+            "contract": "VirtualVault",
+            "src": "contracts\\core\\VirtualVault.sol:46"
+          },
+          {
+            "label": "queuedUsers",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_array(t_address)dyn_storage",
+            "contract": "VirtualVault",
+            "src": "contracts\\core\\VirtualVault.sol:47"
+          },
+          {
+            "label": "authorizedCaller",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_address",
+            "contract": "VirtualVault",
+            "src": "contracts\\core\\VirtualVault.sol:50"
+          },
+          {
+            "label": "lastProcessedIndex",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_uint256",
+            "contract": "VirtualVault",
+            "src": "contracts\\core\\VirtualVault.sol:54"
+          },
+          {
+            "label": "failedDeposits",
+            "offset": 0,
+            "slot": "5",
+            "type": "t_mapping(t_address,t_struct(FailedDeposit)10172_storage)",
+            "contract": "VirtualVault",
+            "src": "contracts\\core\\VirtualVault.sol:62"
+          },
+          {
+            "label": "failedUsers",
+            "offset": 0,
+            "slot": "6",
+            "type": "t_array(t_address)dyn_storage",
+            "contract": "VirtualVault",
+            "src": "contracts\\core\\VirtualVault.sol:63"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "7",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "VirtualVault",
+            "src": "contracts\\core\\VirtualVault.sol:473"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_address)dyn_storage": {
+            "label": "address[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(ICombinedVault)10130": {
+            "label": "contract ICombinedVault",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_struct(FailedDeposit)10172_storage)": {
+            "label": "mapping(address => struct VirtualVault.FailedDeposit)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_struct(QueuedDeposit)10150_storage)": {
+            "label": "mapping(address => struct VirtualVault.QueuedDeposit)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(FailedDeposit)10172_storage": {
+            "label": "struct VirtualVault.FailedDeposit",
+            "members": [
+              {
+                "label": "amount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "retryCount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "lastAttempt",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              }
+            ],
+            "numberOfBytes": "96"
+          },
+          "t_struct(QueuedDeposit)10150_storage": {
             "label": "struct VirtualVault.QueuedDeposit",
             "members": [
               {

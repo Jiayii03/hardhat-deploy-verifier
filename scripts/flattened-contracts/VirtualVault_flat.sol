@@ -3907,7 +3907,7 @@ abstract contract ReentrancyGuardUpgradeable is Initializable {
  * - Detailed event tracking
  */
 interface ICombinedVault {
-    function deposit(address user, uint256 amount) external;
+    function deposit(uint256 assets, address receiver) external returns (uint256);
 }
 
 contract VirtualVault is 
@@ -3950,7 +3950,7 @@ contract VirtualVault is
     event DepositFailed(address indexed user, uint256 amount, string reason);
     event DepositProcessed(address indexed user, uint256 amount);
     event VirtualDeposit(
-        address indexed user,
+        address indexed user, 
         uint256 amount,
         uint256 virtualShares,
         uint256 virtualBalance,
@@ -3970,6 +3970,33 @@ contract VirtualVault is
         uint256 totalUserAssets,
         uint256 timestamp
     );
+
+    /**
+     * @notice Accepts any assets (ETH or ERC20) that are sent to the vault
+     * @dev This function allows the vault to receive:
+     *      - ETH via direct transfers or .call{value:...}("")
+     *      - ERC20 tokens via transfer/transferFrom
+     * All received assets can be swept to owner using sweepAccidentalTokens:
+     * - For ETH: sweepAccidentalTokens(address(0))
+     * - For ERC20: sweepAccidentalTokens(tokenAddress)
+     * - For main asset: only excess above managed assets will be swept
+     * This prevents assets from getting stuck in the vault
+     */
+    receive() external payable {
+        // Optional: emit an event for received ETH
+        emit ReceivedAsset(msg.sender, msg.value);
+    }
+
+    /**
+     * @notice Fallback function to handle any calls to the contract
+     * @dev This is required to properly handle payable conversions
+     */
+    fallback() external payable {
+        // Optional: emit an event for received ETH
+        emit ReceivedAsset(msg.sender, msg.value);
+    }
+
+    event ReceivedAsset(address indexed sender, uint256 amount);
 
     /**
      * @notice Ensures only owner or authorized caller can execute function
@@ -4063,15 +4090,6 @@ contract VirtualVault is
             block.timestamp
         );
         return shares;
-    }
-
-    /**
-     * @notice Simplified deposit function
-     * @param assets Amount of assets to deposit
-     * @return shares Amount of shares minted
-     */
-    function deposit(uint256 assets) public returns (uint256) {
-        return deposit(assets, msg.sender);
     }
 
     /**
@@ -4241,7 +4259,7 @@ contract VirtualVault is
         IERC20 assetToken = IERC20(asset());
         SafeERC20.safeIncreaseAllowance(assetToken, address(combinedVault), amount);
         
-        combinedVault.deposit(user, amount);
+        combinedVault.deposit(amount, user);
         _burn(user, amount);
     }
 

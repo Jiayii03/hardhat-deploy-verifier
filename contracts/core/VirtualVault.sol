@@ -22,7 +22,6 @@ import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
-import "forge-std/console.sol";
 
 interface ICombinedVault {
     function deposit(uint256 assets, address receiver) external returns (uint256);
@@ -68,7 +67,7 @@ contract VirtualVault is
     event DepositFailed(address indexed user, uint256 amount, string reason);
     event DepositProcessed(address indexed user, uint256 amount);
     event VirtualDeposit(
-        address indexed user,
+        address indexed user, 
         uint256 amount,
         uint256 virtualShares,
         uint256 virtualBalance,
@@ -491,11 +490,8 @@ contract VirtualVault is
                 uint256 managedAssets = 0;
                 for (uint i = 0; i < queuedUsers.length; i++) {
                     managedAssets += queuedDeposits[queuedUsers[i]].amount;
-                    console.log("Managed assets: ", managedAssets);
                 }
                 // Only allow sweeping if there's excess balance
-                console.log("Vault balance: ", vaultBalance);
-                console.log("Managed assets: ", managedAssets);
                 require(vaultBalance > managedAssets, "No excess assets to sweep");
                 uint256 excessAmount = vaultBalance - managedAssets;
                 SafeERC20.safeTransfer(IERC20(token), owner(), excessAmount);
