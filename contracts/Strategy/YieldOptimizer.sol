@@ -49,7 +49,7 @@ contract YieldOptimizer is Initializable, OwnableUpgradeable {
 
         __Ownable_init(msg.sender);
         
-        vault = CombinedVault(_vault);
+        vault = CombinedVault(payable(address(_vault)));
         registry = vault.registry();
         asset = IERC20(_asset);
         

@@ -604,6 +604,24 @@ interface IProtocolAdapter {
  * - Safety checks and balance verifications
  */
 /**
+ * @title Simplified Compound V3 (Comet) Interface
+ * @notice Contains only the methods used by CompoundAdapter
+ */
+interface CometMainInterface {
+    // Supply and withdrawal methods
+    function supplyTo(address dst, address asset, uint amount) external;
+    function withdrawFrom(address src, address to, address asset, uint amount) external;
+    
+    // Interest rate calculation methods
+    function getUtilization() external view returns (uint);
+    function getSupplyRate(uint utilization) external view returns (uint64);
+    
+    // Account methods
+    function accrueAccount(address account) external;
+    function balanceOf(address owner) external view returns (uint256);
+}
+
+/**
  * @title ICometAllowance
  * @notice Interface for Compound V3's allowance management
  * @dev Handles manager permissions for account control
@@ -623,24 +641,6 @@ interface ICometAllowance {
      * @return True if manager has permission
      */
     function isAllowed(address owner, address manager) external view returns (bool);
-}
-
-/**
- * @title Simplified Compound V3 (Comet) Interface
- * @notice Contains only the methods used by CompoundAdapter
- */
-interface CometMainInterface {
-    // Supply and withdrawal methods
-    function supplyTo(address dst, address asset, uint amount) external;
-    function withdrawFrom(address src, address to, address asset, uint amount) external;
-    
-    // Interest rate calculation methods
-    function getUtilization() external view returns (uint);
-    function getSupplyRate(uint utilization) external view returns (uint64);
-    
-    // Account methods
-    function accrueAccount(address account) external;
-    function balanceOf(address owner) external view returns (uint256);
 }
 
 contract CompoundAdapter is
@@ -733,7 +733,7 @@ contract CompoundAdapter is
      */
     function isAssetSupported(
         address asset
-    ) external view override returns (bool) {
+    ) external view override(IProtocolAdapter) returns (bool) {
         return supportedAssets[asset];
     }
 
@@ -747,7 +747,7 @@ contract CompoundAdapter is
     function supply(
         address asset,
         uint256 amount
-    ) external override onlyOwnerOrAuthorized returns (uint256) {
+    ) external override(IProtocolAdapter) onlyOwnerOrAuthorized returns (uint256) {
         require(supportedAssets[asset], "Asset not supported");
         require(amount > 0, "Amount must be greater than 0");
 
@@ -772,7 +772,7 @@ contract CompoundAdapter is
     function withdraw(
         address asset,
         uint256 amount
-    ) external override onlyOwnerOrAuthorized returns (uint256) {
+    ) external override(IProtocolAdapter) onlyOwnerOrAuthorized returns (uint256) {
         require(supportedAssets[asset], "Asset not supported");
         require(amount > 0, "Amount must be greater than 0");
 
@@ -811,7 +811,7 @@ contract CompoundAdapter is
         address asset,
         uint256 amount,
         address user
-    ) external override onlyOwnerOrAuthorized returns (uint256) {
+    ) external override(IProtocolAdapter) onlyOwnerOrAuthorized returns (uint256) {
         require(supportedAssets[asset], "Asset not supported");
         require(amount > 0, "Amount must be greater than 0");
         require(user != address(0), "Invalid user address");
@@ -850,7 +850,7 @@ contract CompoundAdapter is
     function getApprovalCalldata(
         address asset,
         uint256 amount
-    ) external view override returns (address target, bytes memory data) {
+    ) external view override(IProtocolAdapter) returns (address target, bytes memory data) {
         require(supportedAssets[asset], "Asset not supported");
 
         return (
@@ -870,7 +870,7 @@ contract CompoundAdapter is
      */
     function getTotalPrincipal(
         address asset
-    ) external view override returns (uint256) {
+    ) external view override(IProtocolAdapter) returns (uint256) {
         require(supportedAssets[asset], "Asset not supported");
         return totalPrincipal[asset];
     }
@@ -881,7 +881,7 @@ contract CompoundAdapter is
      * @param asset The asset to check
      * @return APY in basis points (1% = 100)
      */
-    function getAPY(address asset) external view override returns (uint256) {
+    function getAPY(address asset) external view override(IProtocolAdapter) returns (uint256) {
         require(supportedAssets[asset], "Asset not supported");
 
         uint utilization = comet.getUtilization();
@@ -901,7 +901,7 @@ contract CompoundAdapter is
      */
     function getBalance(
         address asset
-    ) external view override returns (uint256) {
+    ) external view override(IProtocolAdapter) returns (uint256) {
         require(supportedAssets[asset], "Asset not supported");
         return totalPrincipal[asset];
     }
@@ -914,7 +914,7 @@ contract CompoundAdapter is
      */
     function harvest(
         address asset
-    ) external override onlyOwnerOrAuthorized returns (uint256 totalAssets) {
+    ) external override(IProtocolAdapter) onlyOwnerOrAuthorized returns (uint256 totalAssets) {
         require(supportedAssets[asset], "Asset not supported");
 
         if (totalPrincipal[asset] == 0) return 0;
@@ -939,7 +939,7 @@ contract CompoundAdapter is
     function setMinRewardAmount(
         address asset,
         uint256 amount
-    ) external override {
+    ) external override(IProtocolAdapter) {
         require(supportedAssets[asset], "Asset not supported");
         minRewardAmount[asset] = amount;
     }
@@ -952,7 +952,7 @@ contract CompoundAdapter is
      */
     function getEstimatedInterest(
         address asset
-    ) external view override returns (uint256) {
+    ) external view override(IProtocolAdapter) returns (uint256) {
         require(supportedAssets[asset], "Asset not supported");
 
         uint utilization = comet.getUtilization();
@@ -966,7 +966,7 @@ contract CompoundAdapter is
      * @notice Gets protocol name
      * @return Protocol name
      */
-    function getProtocolName() external pure override returns (string memory) {
+    function getProtocolName() external pure override(IProtocolAdapter) returns (string memory) {
         return PROTOCOL_NAME;
     }
 
@@ -978,7 +978,7 @@ contract CompoundAdapter is
      */
     function getReceiptToken(
         address asset
-    ) external view override returns (address) {
+    ) external view override(IProtocolAdapter) returns (address) {
         require(supportedAssets[asset], "Asset not supported");
         return address(comet);
     }

@@ -14,11 +14,12 @@ interface IVault {
     function asset() external view returns (address);
 
     /**
-     * @dev Deposit assets into the vault
-     * @param user Address of the user to deposit for
-     * @param amount Amount of assets to deposit
+     * @dev Deposit assets into the vault (ERC4626-compatible)
+     * @param assets Amount of assets to deposit
+     * @param receiver Address receiving the shares
+     * @return shares Amount of shares minted
      */
-    function deposit(address user, uint256 amount) external;
+    function deposit(uint256 assets, address receiver) external returns (uint256);
     
     /**
      * @dev ERC4626-compatible withdraw function
@@ -115,14 +116,6 @@ interface IVault {
      * @return assets Amount of assets that would be received
      */
     function previewRedeem(uint256 shares) external view returns (uint256);
-
-    // /**
-    //  * @dev Mint shares to receiver by depositing assets
-    //  * @param shares Amount of shares to mint
-    //  * @param receiver Address of the receiver
-    //  * @return assets Amount of assets deposited
-    //  */
-    // function mint(uint256 shares, address receiver) external returns (uint256);
 
     /**
      * @dev Burn shares from owner and send assets to receiver

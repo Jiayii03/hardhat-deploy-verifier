@@ -4031,7 +4031,7 @@ contract VirtualVault is
      * @param receiver Address to receive shares (must be msg.sender)
      * @return shares Amount of shares minted
      */
-    function deposit(uint256 assets, address receiver) public override returns (uint256 shares) {
+    function deposit(uint256 assets, address receiver) public override(ERC4626Upgradeable) returns (uint256 shares) {
         require(assets > 0, "Deposit must be > 0");
         require(receiver == msg.sender, "Receiver must be sender");
         
@@ -4082,7 +4082,7 @@ contract VirtualVault is
      * @param owner Address that owns the shares (must be msg.sender)
      * @return shares Amount of shares burned
      */
-    function withdraw(uint256 assets, address receiver, address owner) public override returns (uint256 shares) {
+    function withdraw(uint256 assets, address receiver, address owner) public override(ERC4626Upgradeable) returns (uint256 shares) {
         require(queuedDeposits[owner].amount >= assets, "Not enough queued");
         require(owner == msg.sender, "Only owner can withdraw");
         require(receiver == owner, "Receiver must be owner");
@@ -4115,15 +4115,6 @@ contract VirtualVault is
             block.timestamp
         );
         return shares;
-    }
-    
-    /**
-     * @notice Simplified withdraw function
-     * @param assets Amount of assets to withdraw
-     * @return shares Amount of shares burned
-     */
-    function withdraw(uint256 assets) public returns (uint256) {
-        return withdraw(assets, msg.sender, msg.sender);
     }
 
     /**
@@ -4270,16 +4261,16 @@ contract VirtualVault is
     }
 
     // 1:1 conversion functions
-    function previewDeposit(uint256 assets) public view override returns (uint256) {
+    function previewDeposit(uint256 assets) public view override(ERC4626Upgradeable) returns (uint256) {
         return assets;
     }
-    function previewMint(uint256 shares) public view override returns (uint256) {
+    function previewMint(uint256 shares) public view override(ERC4626Upgradeable) returns (uint256) {
         return shares;
     }
-    function convertToShares(uint256 assets) public view override returns (uint256) {
+    function convertToShares(uint256 assets) public view override(ERC4626Upgradeable) returns (uint256) {
         return assets;
     }
-    function convertToAssets(uint256 shares) public view override returns (uint256) {
+    function convertToAssets(uint256 shares) public view override(ERC4626Upgradeable) returns (uint256) {
         return shares;
     }
 
@@ -4345,4 +4336,34 @@ contract VirtualVault is
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
     uint256[50] private __gap;
+
+    function sweepAccidentalTokens(address token) external onlyOwner {
+        if (token == address(0)) {
+            // Handle ETH
+            uint256 balance = address(this).balance;
+            require(balance > 0, "No ETH to sweep");
+            (bool success, ) = owner().call{value: balance}("");
+            require(success, "ETH transfer failed");
+        } else {
+            // Handle ERC20 tokens
+            uint256 vaultBalance = IERC20(token).balanceOf(address(this));
+            require(vaultBalance > 0, "No tokens to sweep");
+
+            // Special handling for vault's main asset (USDC)
+            if (token == address(asset())) {
+                // Get total managed assets (in queued deposits)
+                uint256 managedAssets = 0;
+                for (uint i = 0; i < queuedUsers.length; i++) {
+                    managedAssets += queuedDeposits[queuedUsers[i]].amount;
+                }
+                // Only allow sweeping if there's excess balance
+                require(vaultBalance > managedAssets, "No excess assets to sweep");
+                uint256 excessAmount = vaultBalance - managedAssets;
+                SafeERC20.safeTransfer(IERC20(token), owner(), excessAmount);
+            } else {
+                // For other tokens, sweep entire balance
+                SafeERC20.safeTransfer(IERC20(token), owner(), vaultBalance);
+            }
+        }
+    }
 }

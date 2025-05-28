@@ -167,7 +167,11 @@ async function main() {
         deployer.address, // treasury address
         1000 // 10% performance fee (1000 basis points)
       ],
-      { kind: "transparent", initializer: "initialize" }
+      { 
+        kind: "transparent", 
+        initializer: "initialize",
+        unsafeAllow: ["constructor"] // Allow constructor for payable functionality
+      }
     );
     const combinedVaultDeployTx = await combinedVault.deployTransaction.wait();
     totalGasUsed = totalGasUsed.add(combinedVaultDeployTx.gasUsed);
@@ -186,7 +190,11 @@ async function main() {
     const virtualVault = await upgrades.deployProxy(
       VirtualVault,
       [USDC_ADDRESS, combinedVault.address],
-      { kind: "transparent", initializer: "initialize" }
+      { 
+        kind: "transparent", 
+        initializer: "initialize",
+        unsafeAllow: ["constructor"] // Allow constructor for payable functionality
+      }
     );
     const virtualVaultDeployTx = await virtualVault.deployTransaction.wait();
     totalGasUsed = totalGasUsed.add(virtualVaultDeployTx.gasUsed);

@@ -353,7 +353,7 @@
             "label": "comet",
             "offset": 0,
             "slot": "0",
-            "type": "t_contract(CometMainInterface)8758",
+            "type": "t_contract(CometMainInterface)8749",
             "contract": "CompoundAdapter",
             "src": "contracts\\adapters\\CompoundAdapter.sol:67"
           },
@@ -419,7 +419,7 @@
             "label": "bool",
             "numberOfBytes": "1"
           },
-          "t_contract(CometMainInterface)8758": {
+          "t_contract(CometMainInterface)8749": {
             "label": "contract CometMainInterface",
             "numberOfBytes": "20"
           },
@@ -859,6 +859,1105 @@
               "contract": "ERC4626Upgradeable",
               "label": "_asset",
               "type": "t_contract(IERC20)2627",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\extensions\\ERC4626Upgradeable.sol:56"
+            },
+            {
+              "contract": "ERC4626Upgradeable",
+              "label": "_underlyingDecimals",
+              "type": "t_uint8",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\extensions\\ERC4626Upgradeable.sol:57"
+            }
+          ],
+          "erc7201:openzeppelin.storage.ERC20": [
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_balances",
+              "type": "t_mapping(t_address,t_uint256)",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:33"
+            },
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_allowances",
+              "type": "t_mapping(t_address,t_mapping(t_address,t_uint256))",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:35"
+            },
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_totalSupply",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:37"
+            },
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_name",
+              "type": "t_string_storage",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:39"
+            },
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_symbol",
+              "type": "t_string_storage",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:40"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:69"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:73"
+            }
+          ]
+        }
+      }
+    },
+    "f14b3e63b605ba9e780f98eb2c921f98c44c63c804f6c89c642e24cf0f3c9823": {
+      "address": "0xCE05E0D81B4F9Ae0C183f90df132A14A89B10D0f",
+      "txHash": "0x88490a71dd91e3fc28f24658a8bf75034b30bb65d86490f8b09a5fd4742e5127",
+      "layout": {
+        "solcVersion": "0.8.20",
+        "storage": [
+          {
+            "label": "registry",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(IRegistry)16513",
+            "contract": "CombinedVault",
+            "src": "contracts\\core\\CombinedVault.sol:42"
+          },
+          {
+            "label": "_asset",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_contract(IERC20)2627",
+            "contract": "CombinedVault",
+            "src": "contracts\\core\\CombinedVault.sol:45"
+          },
+          {
+            "label": "redemptionRate",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_uint256",
+            "contract": "CombinedVault",
+            "src": "contracts\\core\\CombinedVault.sol:51"
+          },
+          {
+            "label": "previousRedemptionRate",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_uint256",
+            "contract": "CombinedVault",
+            "src": "contracts\\core\\CombinedVault.sol:52"
+          },
+          {
+            "label": "virtualVault",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_contract(VirtualVault)16407",
+            "contract": "CombinedVault",
+            "src": "contracts\\core\\CombinedVault.sol:55"
+          },
+          {
+            "label": "authorizedCaller",
+            "offset": 0,
+            "slot": "5",
+            "type": "t_address",
+            "contract": "CombinedVault",
+            "src": "contracts\\core\\CombinedVault.sol:58"
+          },
+          {
+            "label": "treasury",
+            "offset": 0,
+            "slot": "6",
+            "type": "t_address",
+            "contract": "CombinedVault",
+            "src": "contracts\\core\\CombinedVault.sol:61"
+          },
+          {
+            "label": "performanceFeeBps",
+            "offset": 0,
+            "slot": "7",
+            "type": "t_uint256",
+            "contract": "CombinedVault",
+            "src": "contracts\\core\\CombinedVault.sol:62"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "8",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "CombinedVault",
+            "src": "contracts\\core\\CombinedVault.sol:803"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_contract(IERC20)2627": {
+            "label": "contract IERC20",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IRegistry)16513": {
+            "label": "contract IRegistry",
+            "numberOfBytes": "20"
+          },
+          "t_contract(VirtualVault)16407": {
+            "label": "contract VirtualVault",
+            "numberOfBytes": "20"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8"
+          },
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)"
+          },
+          "t_mapping(t_address,t_mapping(t_address,t_uint256))": {
+            "label": "mapping(address => mapping(address => uint256))"
+          },
+          "t_string_storage": {
+            "label": "string"
+          },
+          "t_uint64": {
+            "label": "uint64"
+          },
+          "t_bool": {
+            "label": "bool"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:24"
+            }
+          ],
+          "erc7201:openzeppelin.storage.ReentrancyGuard": [
+            {
+              "contract": "ReentrancyGuardUpgradeable",
+              "label": "_status",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\utils\\ReentrancyGuardUpgradeable.sol:43"
+            }
+          ],
+          "erc7201:openzeppelin.storage.ERC4626": [
+            {
+              "contract": "ERC4626Upgradeable",
+              "label": "_asset",
+              "type": "t_contract(IERC20)2627",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\extensions\\ERC4626Upgradeable.sol:56"
+            },
+            {
+              "contract": "ERC4626Upgradeable",
+              "label": "_underlyingDecimals",
+              "type": "t_uint8",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\extensions\\ERC4626Upgradeable.sol:57"
+            }
+          ],
+          "erc7201:openzeppelin.storage.ERC20": [
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_balances",
+              "type": "t_mapping(t_address,t_uint256)",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:33"
+            },
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_allowances",
+              "type": "t_mapping(t_address,t_mapping(t_address,t_uint256))",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:35"
+            },
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_totalSupply",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:37"
+            },
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_name",
+              "type": "t_string_storage",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:39"
+            },
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_symbol",
+              "type": "t_string_storage",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:40"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:69"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:73"
+            }
+          ]
+        }
+      }
+    },
+    "7bc3640574f5d43c368d25d111fdf8efefa6457fb0e54901e8e69822b0d478c6": {
+      "address": "0x0B1c56ef7Dc8322176271DCdF8DAA8F123Ccf355",
+      "txHash": "0xd6552a48425db48dadbaece9717f52fb2b935866016237b5387c104bf5a79e3e",
+      "layout": {
+        "solcVersion": "0.8.20",
+        "storage": [
+          {
+            "label": "combinedVault",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(ICombinedVault)10120",
+            "contract": "VirtualVault",
+            "src": "contracts\\core\\VirtualVault.sol:39"
+          },
+          {
+            "label": "queuedDeposits",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_mapping(t_address,t_struct(QueuedDeposit)10140_storage)",
+            "contract": "VirtualVault",
+            "src": "contracts\\core\\VirtualVault.sol:46"
+          },
+          {
+            "label": "queuedUsers",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_array(t_address)dyn_storage",
+            "contract": "VirtualVault",
+            "src": "contracts\\core\\VirtualVault.sol:47"
+          },
+          {
+            "label": "authorizedCaller",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_address",
+            "contract": "VirtualVault",
+            "src": "contracts\\core\\VirtualVault.sol:50"
+          },
+          {
+            "label": "lastProcessedIndex",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_uint256",
+            "contract": "VirtualVault",
+            "src": "contracts\\core\\VirtualVault.sol:54"
+          },
+          {
+            "label": "failedDeposits",
+            "offset": 0,
+            "slot": "5",
+            "type": "t_mapping(t_address,t_struct(FailedDeposit)10162_storage)",
+            "contract": "VirtualVault",
+            "src": "contracts\\core\\VirtualVault.sol:62"
+          },
+          {
+            "label": "failedUsers",
+            "offset": 0,
+            "slot": "6",
+            "type": "t_array(t_address)dyn_storage",
+            "contract": "VirtualVault",
+            "src": "contracts\\core\\VirtualVault.sol:63"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "7",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "VirtualVault",
+            "src": "contracts\\core\\VirtualVault.sol:455"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_address)dyn_storage": {
+            "label": "address[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(ICombinedVault)10120": {
+            "label": "contract ICombinedVault",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_struct(FailedDeposit)10162_storage)": {
+            "label": "mapping(address => struct VirtualVault.FailedDeposit)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_struct(QueuedDeposit)10140_storage)": {
+            "label": "mapping(address => struct VirtualVault.QueuedDeposit)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(FailedDeposit)10162_storage": {
+            "label": "struct VirtualVault.FailedDeposit",
+            "members": [
+              {
+                "label": "amount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "retryCount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "lastAttempt",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              }
+            ],
+            "numberOfBytes": "96"
+          },
+          "t_struct(QueuedDeposit)10140_storage": {
+            "label": "struct VirtualVault.QueuedDeposit",
+            "members": [
+              {
+                "label": "amount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "exists",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_contract(IERC20)2479": {
+            "label": "contract IERC20"
+          },
+          "t_uint8": {
+            "label": "uint8"
+          },
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)"
+          },
+          "t_mapping(t_address,t_mapping(t_address,t_uint256))": {
+            "label": "mapping(address => mapping(address => uint256))"
+          },
+          "t_string_storage": {
+            "label": "string"
+          },
+          "t_uint64": {
+            "label": "uint64"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:24"
+            }
+          ],
+          "erc7201:openzeppelin.storage.ReentrancyGuard": [
+            {
+              "contract": "ReentrancyGuardUpgradeable",
+              "label": "_status",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\utils\\ReentrancyGuardUpgradeable.sol:43"
+            }
+          ],
+          "erc7201:openzeppelin.storage.ERC4626": [
+            {
+              "contract": "ERC4626Upgradeable",
+              "label": "_asset",
+              "type": "t_contract(IERC20)2479",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\extensions\\ERC4626Upgradeable.sol:56"
+            },
+            {
+              "contract": "ERC4626Upgradeable",
+              "label": "_underlyingDecimals",
+              "type": "t_uint8",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\extensions\\ERC4626Upgradeable.sol:57"
+            }
+          ],
+          "erc7201:openzeppelin.storage.ERC20": [
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_balances",
+              "type": "t_mapping(t_address,t_uint256)",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:33"
+            },
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_allowances",
+              "type": "t_mapping(t_address,t_mapping(t_address,t_uint256))",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:35"
+            },
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_totalSupply",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:37"
+            },
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_name",
+              "type": "t_string_storage",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:39"
+            },
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_symbol",
+              "type": "t_string_storage",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:40"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:69"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:73"
+            }
+          ]
+        }
+      }
+    },
+    "1b0b490109394017d89ac1f7d35541cdc756b483d52f81e363e2409da0c90f80": {
+      "address": "0x0837D41D494B444535B7c20cD1f7d33840f4936D",
+      "txHash": "0x7d609be4ff1e6e8c9a82c8c617976b2e7025c1e25f4d82cb69379fe52b17966b",
+      "layout": {
+        "solcVersion": "0.8.20",
+        "storage": [
+          {
+            "label": "registry",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(IRegistry)11401",
+            "contract": "CombinedVault",
+            "src": "contracts\\core\\CombinedVault.sol:42"
+          },
+          {
+            "label": "_asset",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_contract(IERC20)2479",
+            "contract": "CombinedVault",
+            "src": "contracts\\core\\CombinedVault.sol:45"
+          },
+          {
+            "label": "redemptionRate",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_uint256",
+            "contract": "CombinedVault",
+            "src": "contracts\\core\\CombinedVault.sol:51"
+          },
+          {
+            "label": "previousRedemptionRate",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_uint256",
+            "contract": "CombinedVault",
+            "src": "contracts\\core\\CombinedVault.sol:52"
+          },
+          {
+            "label": "virtualVault",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_contract(VirtualVault)11295",
+            "contract": "CombinedVault",
+            "src": "contracts\\core\\CombinedVault.sol:55"
+          },
+          {
+            "label": "authorizedCaller",
+            "offset": 0,
+            "slot": "5",
+            "type": "t_address",
+            "contract": "CombinedVault",
+            "src": "contracts\\core\\CombinedVault.sol:58"
+          },
+          {
+            "label": "treasury",
+            "offset": 0,
+            "slot": "6",
+            "type": "t_address",
+            "contract": "CombinedVault",
+            "src": "contracts\\core\\CombinedVault.sol:61"
+          },
+          {
+            "label": "performanceFeeBps",
+            "offset": 0,
+            "slot": "7",
+            "type": "t_uint256",
+            "contract": "CombinedVault",
+            "src": "contracts\\core\\CombinedVault.sol:62"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "8",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "CombinedVault",
+            "src": "contracts\\core\\CombinedVault.sol:847"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_contract(IERC20)2479": {
+            "label": "contract IERC20",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IRegistry)11401": {
+            "label": "contract IRegistry",
+            "numberOfBytes": "20"
+          },
+          "t_contract(VirtualVault)11295": {
+            "label": "contract VirtualVault",
+            "numberOfBytes": "20"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8"
+          },
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)"
+          },
+          "t_mapping(t_address,t_mapping(t_address,t_uint256))": {
+            "label": "mapping(address => mapping(address => uint256))"
+          },
+          "t_string_storage": {
+            "label": "string"
+          },
+          "t_uint64": {
+            "label": "uint64"
+          },
+          "t_bool": {
+            "label": "bool"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:24"
+            }
+          ],
+          "erc7201:openzeppelin.storage.ReentrancyGuard": [
+            {
+              "contract": "ReentrancyGuardUpgradeable",
+              "label": "_status",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\utils\\ReentrancyGuardUpgradeable.sol:43"
+            }
+          ],
+          "erc7201:openzeppelin.storage.ERC4626": [
+            {
+              "contract": "ERC4626Upgradeable",
+              "label": "_asset",
+              "type": "t_contract(IERC20)2479",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\extensions\\ERC4626Upgradeable.sol:56"
+            },
+            {
+              "contract": "ERC4626Upgradeable",
+              "label": "_underlyingDecimals",
+              "type": "t_uint8",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\extensions\\ERC4626Upgradeable.sol:57"
+            }
+          ],
+          "erc7201:openzeppelin.storage.ERC20": [
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_balances",
+              "type": "t_mapping(t_address,t_uint256)",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:33"
+            },
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_allowances",
+              "type": "t_mapping(t_address,t_mapping(t_address,t_uint256))",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:35"
+            },
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_totalSupply",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:37"
+            },
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_name",
+              "type": "t_string_storage",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:39"
+            },
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_symbol",
+              "type": "t_string_storage",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:40"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:69"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:73"
+            }
+          ]
+        }
+      }
+    },
+    "f8651459f04409e586b0cdbe5b638b46404a6f60f753ac78a711b71d3253cb6f": {
+      "address": "0x1827aF5782Ed6bf3F8054edA2f9Aa6E48a1EBB36",
+      "txHash": "0xf09729f5adf3d2774bcbe369d4b7517d137f3067d1caa942454f031029700fe4",
+      "layout": {
+        "solcVersion": "0.8.20",
+        "storage": [
+          {
+            "label": "registry",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(IRegistry)10573",
+            "contract": "CombinedVault",
+            "src": "contracts\\core\\CombinedVault.sol:42"
+          },
+          {
+            "label": "_asset",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_contract(IERC20)2479",
+            "contract": "CombinedVault",
+            "src": "contracts\\core\\CombinedVault.sol:45"
+          },
+          {
+            "label": "redemptionRate",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_uint256",
+            "contract": "CombinedVault",
+            "src": "contracts\\core\\CombinedVault.sol:51"
+          },
+          {
+            "label": "previousRedemptionRate",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_uint256",
+            "contract": "CombinedVault",
+            "src": "contracts\\core\\CombinedVault.sol:52"
+          },
+          {
+            "label": "virtualVault",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_contract(VirtualVault)10467",
+            "contract": "CombinedVault",
+            "src": "contracts\\core\\CombinedVault.sol:55"
+          },
+          {
+            "label": "authorizedCaller",
+            "offset": 0,
+            "slot": "5",
+            "type": "t_address",
+            "contract": "CombinedVault",
+            "src": "contracts\\core\\CombinedVault.sol:58"
+          },
+          {
+            "label": "treasury",
+            "offset": 0,
+            "slot": "6",
+            "type": "t_address",
+            "contract": "CombinedVault",
+            "src": "contracts\\core\\CombinedVault.sol:61"
+          },
+          {
+            "label": "performanceFeeBps",
+            "offset": 0,
+            "slot": "7",
+            "type": "t_uint256",
+            "contract": "CombinedVault",
+            "src": "contracts\\core\\CombinedVault.sol:62"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "8",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "CombinedVault",
+            "src": "contracts\\core\\CombinedVault.sol:847"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_contract(IERC20)2479": {
+            "label": "contract IERC20",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IRegistry)10573": {
+            "label": "contract IRegistry",
+            "numberOfBytes": "20"
+          },
+          "t_contract(VirtualVault)10467": {
+            "label": "contract VirtualVault",
+            "numberOfBytes": "20"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8"
+          },
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)"
+          },
+          "t_mapping(t_address,t_mapping(t_address,t_uint256))": {
+            "label": "mapping(address => mapping(address => uint256))"
+          },
+          "t_string_storage": {
+            "label": "string"
+          },
+          "t_uint64": {
+            "label": "uint64"
+          },
+          "t_bool": {
+            "label": "bool"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:24"
+            }
+          ],
+          "erc7201:openzeppelin.storage.ReentrancyGuard": [
+            {
+              "contract": "ReentrancyGuardUpgradeable",
+              "label": "_status",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\utils\\ReentrancyGuardUpgradeable.sol:43"
+            }
+          ],
+          "erc7201:openzeppelin.storage.ERC4626": [
+            {
+              "contract": "ERC4626Upgradeable",
+              "label": "_asset",
+              "type": "t_contract(IERC20)2479",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\extensions\\ERC4626Upgradeable.sol:56"
+            },
+            {
+              "contract": "ERC4626Upgradeable",
+              "label": "_underlyingDecimals",
+              "type": "t_uint8",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\extensions\\ERC4626Upgradeable.sol:57"
+            }
+          ],
+          "erc7201:openzeppelin.storage.ERC20": [
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_balances",
+              "type": "t_mapping(t_address,t_uint256)",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:33"
+            },
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_allowances",
+              "type": "t_mapping(t_address,t_mapping(t_address,t_uint256))",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:35"
+            },
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_totalSupply",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:37"
+            },
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_name",
+              "type": "t_string_storage",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:39"
+            },
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_symbol",
+              "type": "t_string_storage",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:40"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:69"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:73"
+            }
+          ]
+        }
+      }
+    },
+    "183b382ac2d564e1fbe54f59422ad5f0ae51d0c8752dcebe969508cda41a3929": {
+      "address": "0xc12C9abF60125dA968BC634DFD1F8Eb9De27EC03",
+      "txHash": "0x38ad642e76a68a7d13d5e4194829b573d39533faa571e9471ce3f3316a33bc6d",
+      "layout": {
+        "solcVersion": "0.8.20",
+        "storage": [
+          {
+            "label": "combinedVault",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(ICombinedVault)9305",
+            "contract": "VirtualVault",
+            "src": "contracts\\core\\VirtualVault.sol:39"
+          },
+          {
+            "label": "queuedDeposits",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_mapping(t_address,t_struct(QueuedDeposit)9325_storage)",
+            "contract": "VirtualVault",
+            "src": "contracts\\core\\VirtualVault.sol:46"
+          },
+          {
+            "label": "queuedUsers",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_array(t_address)dyn_storage",
+            "contract": "VirtualVault",
+            "src": "contracts\\core\\VirtualVault.sol:47"
+          },
+          {
+            "label": "authorizedCaller",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_address",
+            "contract": "VirtualVault",
+            "src": "contracts\\core\\VirtualVault.sol:50"
+          },
+          {
+            "label": "lastProcessedIndex",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_uint256",
+            "contract": "VirtualVault",
+            "src": "contracts\\core\\VirtualVault.sol:54"
+          },
+          {
+            "label": "failedDeposits",
+            "offset": 0,
+            "slot": "5",
+            "type": "t_mapping(t_address,t_struct(FailedDeposit)9347_storage)",
+            "contract": "VirtualVault",
+            "src": "contracts\\core\\VirtualVault.sol:62"
+          },
+          {
+            "label": "failedUsers",
+            "offset": 0,
+            "slot": "6",
+            "type": "t_array(t_address)dyn_storage",
+            "contract": "VirtualVault",
+            "src": "contracts\\core\\VirtualVault.sol:63"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "7",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "VirtualVault",
+            "src": "contracts\\core\\VirtualVault.sol:455"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_address)dyn_storage": {
+            "label": "address[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(ICombinedVault)9305": {
+            "label": "contract ICombinedVault",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_struct(FailedDeposit)9347_storage)": {
+            "label": "mapping(address => struct VirtualVault.FailedDeposit)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_struct(QueuedDeposit)9325_storage)": {
+            "label": "mapping(address => struct VirtualVault.QueuedDeposit)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(FailedDeposit)9347_storage": {
+            "label": "struct VirtualVault.FailedDeposit",
+            "members": [
+              {
+                "label": "amount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "retryCount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "lastAttempt",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              }
+            ],
+            "numberOfBytes": "96"
+          },
+          "t_struct(QueuedDeposit)9325_storage": {
+            "label": "struct VirtualVault.QueuedDeposit",
+            "members": [
+              {
+                "label": "amount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "exists",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_contract(IERC20)2479": {
+            "label": "contract IERC20"
+          },
+          "t_uint8": {
+            "label": "uint8"
+          },
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)"
+          },
+          "t_mapping(t_address,t_mapping(t_address,t_uint256))": {
+            "label": "mapping(address => mapping(address => uint256))"
+          },
+          "t_string_storage": {
+            "label": "string"
+          },
+          "t_uint64": {
+            "label": "uint64"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:24"
+            }
+          ],
+          "erc7201:openzeppelin.storage.ReentrancyGuard": [
+            {
+              "contract": "ReentrancyGuardUpgradeable",
+              "label": "_status",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\utils\\ReentrancyGuardUpgradeable.sol:43"
+            }
+          ],
+          "erc7201:openzeppelin.storage.ERC4626": [
+            {
+              "contract": "ERC4626Upgradeable",
+              "label": "_asset",
+              "type": "t_contract(IERC20)2479",
               "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\extensions\\ERC4626Upgradeable.sol:56"
             },
             {

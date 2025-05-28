@@ -104,10 +104,34 @@ contract CombinedVault is
     event PerformanceFeeUpdated(uint256 oldFee, uint256 newFee);
     event TreasuryUpdated(address oldTreasury, address newTreasury);
     event PerformanceFeeCollected(uint256 amount, uint256 timestamp);
+    event ReceivedAsset(address indexed sender, uint256 amount);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
+    }
+
+    /**
+     * @notice Accepts any assets (ETH or ERC20) that are sent to the vault
+     * @dev This function allows the vault to receive:
+     *      - ETH via direct transfers or .call{value:...}("")
+     *      - ERC20 tokens via transfer/transferFrom
+     * All received assets can be swept to treasury using sweepAccidentalTokens:
+     * - For ETH: sweepAccidentalTokens(address(0))
+     * - For ERC20: sweepAccidentalTokens(tokenAddress)
+     * - For USDC (vault's main asset): only excess above managed assets will be swept
+     * This prevents assets from getting stuck in the vault
+     */
+    receive() external payable {
+        emit ReceivedAsset(msg.sender, msg.value);
+    }
+
+    /**
+     * @notice Fallback function to handle any calls to the contract
+     * @dev This is required to properly handle payable conversions
+     */
+    fallback() external payable {
+        emit ReceivedAsset(msg.sender, msg.value);
     }
 
     /**
@@ -182,7 +206,7 @@ contract CombinedVault is
      */
     function setVirtualVault(address _vault) external onlyOwner {
         require(_vault != address(0), "Invalid address");
-        virtualVault = VirtualVault(_vault);
+        virtualVault = VirtualVault(payable(_vault));
         emit VirtualVaultSet(_vault);
     }
 
@@ -238,7 +262,7 @@ contract CombinedVault is
         if (remainingProtocols.length > 0) {
             _distributeAssets();
         }
-    }
+    }   
 
     /**
      * @notice Replaces one protocol with another
@@ -293,36 +317,34 @@ contract CombinedVault is
     /**
      * @notice Deposits assets into the vault
      * @dev Distributes assets across protocols and mints shares
-     * @param user Address of the user to deposit for
-     * @param amount Amount of assets to deposit
+     * @param assets Amount of assets to deposit
+     * @param receiver Address receiving the shares
+     * @return receiptTokens Amount of shares minted
      */
-    function deposit(
-        address user,
-        uint256 amount
-    ) external override(IVault) onlyVirtualVault nonReentrant {
-        require(user != address(0), "Invalid user");
-        require(amount > 0, "Deposit must be > 0");
-        
+    function deposit(uint256 assets, address receiver) public override(ERC4626Upgradeable, IVault) onlyVirtualVault nonReentrant returns (uint256) {
+        require(receiver != address(0), "Invalid receiver");
+        require(assets > 0, "Deposit must be > 0");
+
         uint256[] memory activeProtocolIds = registry.getActiveProtocolIds();
         require(activeProtocolIds.length > 0, "No active protocols");
 
         // Transfer and distribute
-        SafeERC20.safeTransferFrom(_asset, msg.sender, address(this), amount);
+        SafeERC20.safeTransferFrom(_asset, msg.sender, address(this), assets);
         _distributeAssets();
 
         // Mint shares and emit event
-        uint256 receiptTokens = convertToShares(amount);
-        _mint(user, receiptTokens);
+        uint256 receiptTokens = convertToShares(assets);
+        _mint(receiver, receiptTokens);
 
-        uint256 walletBalance = _asset.balanceOf(user);
-        uint256 vaultPosition = convertToAssets(balanceOf(user));
+        uint256 walletBalance = _asset.balanceOf(receiver);
+        uint256 vaultPosition = convertToAssets(balanceOf(receiver));
         uint256 totalUserAssets = walletBalance + vaultPosition;
 
         emit Deposited(
-            user,
-            amount,
+            receiver,
+            assets,
             receiptTokens,
-            balanceOf(user),
+            balanceOf(receiver),
             vaultPosition,
             walletBalance,
             totalUserAssets,
@@ -330,6 +352,8 @@ contract CombinedVault is
             redemptionRate,
             block.timestamp
         );
+
+        return receiptTokens;
     }
 
     /**
@@ -426,7 +450,6 @@ contract CombinedVault is
 
         // Harvest from all protocols
         uint256 totalAssets = _harvestAllProtocols();
-        totalAssets += _asset.balanceOf(address(this));
 
         // Store previous rate before any updates
         previousRedemptionRate = redemptionRate;
@@ -699,7 +722,7 @@ contract CombinedVault is
 
     /**
      * @dev Returns the total amount of the underlying asset that is "managed" by Vault
-     * @return totalManagedAssets The total amount of assets managed by the vault
+     * @return totalManagedAssets The total amount of assets managed by the vault (in adapters only)
      */
     function totalAssets() public view override returns (uint256) {
         uint256 total = 0;
@@ -713,7 +736,7 @@ contract CombinedVault is
             total += adapter.getBalance(address(_asset));
         }
 
-        return total + _asset.balanceOf(address(this));
+        return total; 
     }
 
     /**
@@ -753,21 +776,6 @@ contract CombinedVault is
         return convertToAssets(shares);
     }
 
-    // /**
-    //  * @dev Mints shares to receiver by depositing assets
-    //  * @param shares Amount of shares to mint
-    //  * @param receiver Address of the receiver
-    //  * @return assets Amount of assets deposited
-    //  */
-    // function mint(
-    //     uint256 shares,
-    //     address receiver
-    // ) public override(ERC4626Upgradeable, IVault) returns (uint256) {
-    //     uint256 assets = previewMint(shares);
-    //     deposit(assets, receiver);
-    //     return assets;
-    // }
-
     /**
      * @dev Burns shares from owner and sends assets to receiver
      * @param shares Amount of shares to redeem
@@ -793,6 +801,42 @@ contract CombinedVault is
         require(_performanceFeeBps <= 1000, "Fee too high"); // Max 10%
         emit PerformanceFeeUpdated(performanceFeeBps, _performanceFeeBps);
         performanceFeeBps = _performanceFeeBps;
+    }
+
+    /**
+     * @notice Sweeps accidentally transferred assets to treasury
+     * @dev Only sweeps assets that are not part of the protocol's managed assets
+     * @param token Address of the token to sweep (address(0) for ETH)
+     */
+    function sweepAccidentalTokens(address token) external onlyOwner {
+        if (token == address(0)) {
+            // Handle ETH
+            uint256 balance = address(this).balance;
+            require(balance > 0, "No ETH to sweep");
+            (bool success, ) = treasury.call{value: balance}("");
+            require(success, "ETH transfer failed");
+        } else {
+            // Handle ERC20 tokens
+            uint256 vaultBalance = IERC20(token).balanceOf(address(this));
+            require(vaultBalance > 0, "No tokens to sweep");
+
+            // Special handling for vault's main asset (USDC)
+            if (token == address(_asset)) {
+                // Get total managed assets (in adapters only)
+                uint256 managedAssets = totalAssets();
+                // Calculate total balance (managed + additional)
+                uint256 totalBalance = managedAssets + vaultBalance;
+                // Only allow sweeping if there's excess balance
+                require(totalBalance > managedAssets, "No excess assets to sweep");
+                // Calculate excess amount to sweep (total - managed)
+                uint256 excessAmount = totalBalance - managedAssets;
+                // Transfer excess to treasury
+                SafeERC20.safeTransfer(IERC20(token), treasury, excessAmount);
+            } else {
+                // For other tokens, sweep entire balance
+                SafeERC20.safeTransfer(IERC20(token), treasury, vaultBalance);
+            }
+        }
     }
 
     /**

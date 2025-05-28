@@ -688,7 +688,7 @@ contract ProtocolRegistry is IRegistry, Initializable, OwnableUpgradeable {
      * @param protocolId The unique ID for the protocol
      * @param name The name of the protocol
      */
-    function registerProtocol(uint256 protocolId, string memory name) external override onlyOwnerOrAuthorized {
+    function registerProtocol(uint256 protocolId, string memory name) external override(IRegistry) onlyOwnerOrAuthorized {
         require(bytes(protocolNames[protocolId]).length == 0, "Protocol ID already used");
         require(bytes(name).length > 0, "Empty name");
         require(protocolIds.length < 100, "Too many protocols"); // Add reasonable limit
@@ -706,7 +706,7 @@ contract ProtocolRegistry is IRegistry, Initializable, OwnableUpgradeable {
      * @param asset The address of the asset
      * @param adapter The address of the adapter
      */
-    function registerAdapter(uint256 protocolId, address asset, address adapter) external override onlyOwnerOrAuthorized {
+    function registerAdapter(uint256 protocolId, address asset, address adapter) external override(IRegistry) onlyOwnerOrAuthorized {
         require(bytes(protocolNames[protocolId]).length > 0, "Protocol not registered");
         require(IProtocolAdapter(adapter).isAssetSupported(asset), "Asset not supported by adapter");
         
@@ -721,7 +721,7 @@ contract ProtocolRegistry is IRegistry, Initializable, OwnableUpgradeable {
      * @param protocolId The ID of the protocol
      * @param asset The address of the asset
      */
-    function removeAdapter(uint256 protocolId, address asset) external override onlyOwnerOrAuthorized {
+    function removeAdapter(uint256 protocolId, address asset) external override(IRegistry) onlyOwnerOrAuthorized {
         require(adapters[protocolId][asset] != address(0), "Adapter not registered");
         
         delete adapters[protocolId][asset];
@@ -734,7 +734,7 @@ contract ProtocolRegistry is IRegistry, Initializable, OwnableUpgradeable {
      * @dev Adds a protocol to the list of protocols with user funds
      * @param protocolId The protocol ID to add
      */
-    function addActiveProtocol(uint256 protocolId) external override onlyOwnerOrAuthorized {
+    function addActiveProtocol(uint256 protocolId) external override(IRegistry) onlyOwnerOrAuthorized {
         require(bytes(protocolNames[protocolId]).length > 0, "Protocol not registered");
         
         // Check if already in the list
@@ -753,7 +753,7 @@ contract ProtocolRegistry is IRegistry, Initializable, OwnableUpgradeable {
      * @dev Removes a protocol from the list of protocols with user funds
      * @param protocolId The protocol ID to remove
      */
-    function removeActiveProtocol(uint256 protocolId) external override onlyOwnerOrAuthorized {
+    function removeActiveProtocol(uint256 protocolId) external override(IRegistry) onlyOwnerOrAuthorized {
         bool found = false;
         
         for (uint i = 0; i < activeProtocolIds.length; i++) {
@@ -778,7 +778,7 @@ contract ProtocolRegistry is IRegistry, Initializable, OwnableUpgradeable {
      * @param oldProtocolId The protocol ID to remove
      * @param newProtocolId The protocol ID to add
      */
-    function replaceActiveProtocol(uint256 oldProtocolId, uint256 newProtocolId) external override onlyOwnerOrAuthorized {
+    function replaceActiveProtocol(uint256 oldProtocolId, uint256 newProtocolId) external override(IRegistry) onlyOwnerOrAuthorized {
         require(bytes(protocolNames[newProtocolId]).length > 0, "New protocol not registered");
         
         bool found = false;
@@ -801,7 +801,7 @@ contract ProtocolRegistry is IRegistry, Initializable, OwnableUpgradeable {
      * @dev Allows another contract (e.g., YieldOptimizer) to call restricted functions
      * @param newCaller The address of the new authorized contract
      */
-    function setAuthorizedCaller(address newCaller) external override onlyOwner {
+    function setAuthorizedCaller(address newCaller) external override(IRegistry) onlyOwner {
         require(newCaller != address(0), "Invalid address");
         emit AuthorizedCallerUpdated(authorizedCaller, newCaller);
         authorizedCaller = newCaller;
@@ -814,7 +814,7 @@ contract ProtocolRegistry is IRegistry, Initializable, OwnableUpgradeable {
      * @param asset The address of the asset
      * @return The protocol adapter
      */
-    function getAdapter(uint256 protocolId, address asset) external view override returns (IProtocolAdapter) {
+    function getAdapter(uint256 protocolId, address asset) external view override(IRegistry) returns (IProtocolAdapter) {
         address adapterAddress = adapters[protocolId][asset];
         require(adapterAddress != address(0), "Adapter not found");
         
@@ -825,7 +825,7 @@ contract ProtocolRegistry is IRegistry, Initializable, OwnableUpgradeable {
      * @notice Get all registered protocol IDs
      * @return Array of protocol IDs
      */
-    function getAllProtocolIds() external view override returns (uint256[] memory) {
+    function getAllProtocolIds() external view override(IRegistry) returns (uint256[] memory) {
         return protocolIds;
     }
     
@@ -833,7 +833,7 @@ contract ProtocolRegistry is IRegistry, Initializable, OwnableUpgradeable {
      * @notice Get all active protocol IDs
      * @return Array of active protocol IDs
      */
-    function getActiveProtocolIds() external view override returns (uint256[] memory) {
+    function getActiveProtocolIds() external view override(IRegistry) returns (uint256[] memory) {
         return activeProtocolIds;
     }
 
@@ -854,7 +854,7 @@ contract ProtocolRegistry is IRegistry, Initializable, OwnableUpgradeable {
      * @param protocolId The ID of the protocol
      * @return The name of the protocol
      */
-    function getProtocolName(uint256 protocolId) external view override returns (string memory) {
+    function getProtocolName(uint256 protocolId) external view override(IRegistry) returns (string memory) {
         string memory name = protocolNames[protocolId];
         require(bytes(name).length > 0, "Protocol not registered");
         
@@ -867,7 +867,7 @@ contract ProtocolRegistry is IRegistry, Initializable, OwnableUpgradeable {
      * @param asset The address of the asset
      * @return True if an adapter is registered
      */
-    function hasAdapter(uint256 protocolId, address asset) external view override returns (bool) {
+    function hasAdapter(uint256 protocolId, address asset) external view override(IRegistry) returns (bool) {
         return adapters[protocolId][asset] != address(0);
     }
 

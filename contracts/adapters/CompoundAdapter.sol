@@ -16,25 +16,8 @@ pragma solidity ^0.8.19;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@compound/CometMainInterface.sol";
 import "./interfaces/IProtocolAdapter.sol";
-
-/**
- * @title Simplified Compound V3 (Comet) Interface
- * @notice Contains only the methods used by CompoundAdapter
- */
-interface CometMainInterface {
-    // Supply and withdrawal methods
-    function supplyTo(address dst, address asset, uint amount) external;
-    function withdrawFrom(address src, address to, address asset, uint amount) external;
-    
-    // Interest rate calculation methods
-    function getUtilization() external view returns (uint);
-    function getSupplyRate(uint utilization) external view returns (uint64);
-    
-    // Account methods
-    function accrueAccount(address account) external;
-    function balanceOf(address owner) external view returns (uint256);
-}
 
 /**
  * @title ICometAllowance
